@@ -1,0 +1,13 @@
+{
+  "prompt_tokens": 4096,
+  "backend": "metal",
+  "quant": "q4_k_m",
+  "cache_prompt_false": {
+    "first_ttft_s": 1.891,
+    "repeat_ttft_s": 1.885
+  },
+  "cache_prompt_true": {
+    "first_ttft_s": 1.888,
+    "repeat_ttft_s": 0.013
+  }
+}
