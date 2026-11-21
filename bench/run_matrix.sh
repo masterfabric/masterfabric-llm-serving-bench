@@ -75,8 +75,7 @@ kvcache() {  # 4 concurrent requests with ~6k-token prompts in a 32k context: f1
     $PY bench/loadgen.py --url http://127.0.0.1:58080 --label "metal-kv-$kv" --levels 4 --requests-per-level 8 \
       --max-tokens 128 --prompt-tokens 6000 --cache-prompt false \
       --meta "{\"backend\":\"metal\",\"quant\":\"q4_k_m\",\"kv_type\":\"$kv\",\"ctx\":32768}" --out "$RAW/kv_$kv.json"
-    grep -iE "KV buffer size|kv_cache.*MiB|CPU_Mapped|Metal_Mapped|MTL0.*buffer size" "$RAW/server-metal-q4_k_m.log" \
-      | head -8 > "$RAW/kv_$kv.mem.txt" || true
+    ps -o rss= -p "$(cat "$RAW/metal.pid")" | tr -d ' ' > "$RAW/kv_$kv.rss_kib"   # resident set after the run
     stop_metal
   done
   $PY - <<'PY'
@@ -84,25 +83,28 @@ import json, re
 rows = []
 for kv in ("f16", "q8_0"):
     d = json.load(open(f"results/raw/kv_{kv}.json")); l = d["levels"][0]
-    mem = open(f"results/raw/kv_{kv}.mem.txt").read()
-    kvm = [float(x) for x in re.findall(r"KV buffer size\s*=\s*([\d.]+) MiB", mem)]
-    rows.append({"kv_type": kv, "ctx": 32768, "kv_buffer_mib": round(sum(kvm), 1) if kvm else None,
+    rss = int(open(f"results/raw/kv_{kv}.rss_kib").read()) / 1024
+    # Qwen2.5-1.5B: 28 layers x 2 KV heads x 128 dims, K and V -> 14,336 values per token
+    bytes_per_value = {"f16": 2.0, "q8_0": 34 / 32}[kv]
+    rows.append({"kv_type": kv, "ctx": 32768, "kv_buffer_mib": round(32768 * 14336 * bytes_per_value / 2**20, 1),
+                 "kv_buffer_note": "computed from the model shape, not read from the server",
+                 "server_rss_mib": round(rss, 1),
                  "output_tok_s": l["output_tok_s"], "ttft_p50_s": l["ttft_s"]["p50"], "itl_ms_p50": l["itl_ms_p50"],
-                 "prompt_tokens_mean": l["prompt_tokens_mean"], "server_log_lines": mem.strip().splitlines()})
+                 "prompt_tokens_mean": l["prompt_tokens_mean"]})
 json.dump({"rows": rows}, open("results/kvcache.json", "w"), indent=2)
 print(json.dumps(rows, indent=1))
 PY
 }
 
-promptcache() {  # same 4k-token prompt twice, cache on vs off
-  start_metal q4_k_m
+promptcache() {  # same 4k-token prompt twice, cache on vs off; fresh server per mode so the first request is cold
   for cp in false true; do
+    start_metal q4_k_m
     $PY bench/loadgen.py --url http://127.0.0.1:58080 --label "metal-cache-$cp" --levels 1 --requests-per-level 1 \
       --max-tokens 16 --prompt-tokens 4096 --cache-prompt $cp --out "$RAW/pc_${cp}_1.json"
     $PY bench/loadgen.py --url http://127.0.0.1:58080 --label "metal-cache-$cp" --levels 1 --requests-per-level 1 \
       --max-tokens 16 --prompt-tokens 4096 --cache-prompt $cp --out "$RAW/pc_${cp}_2.json"
+    stop_metal
   done
-  stop_metal
   $PY - <<'PY'
 import json
 out = {}
