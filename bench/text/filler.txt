@@ -1,0 +1,745 @@
+# 0001. Apache Iceberg as the table format
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+The lab has to behave like an enterprise lakehouse: several engines (Spark for pipelines, an
+MPP SQL engine for analysts) read and write the same tables, records arrive late and get
+corrected, schemas change while the tables are in use, and the storage layer is object
+storage, where renames are not atomic and listing is slow.
+
+Plain Hive tables (directories of files plus a metastore partition list) do not give atomic
+multi-file commits, rely on directory listing for planning, and make schema and partition
+changes either impossible or a full rewrite.
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| **Apache Iceberg** | Engine-neutral spec; hidden partitioning and partition evolution; snapshot isolation; row-level deletes (v2); REST catalog standard; first-class in Cloudera CDP (Spark, Hive, Impala), Trino, Flink, Snowflake, BigQuery | More metadata objects to maintain (manifests, snapshots) |
+| Delta Lake | Mature, very good Spark integration | Strongest in the Databricks ecosystem; Impala on CDP does not read it |
+| Apache Hudi | Strong record-level upserts and incremental pulls | Heavier write path, smaller engine ecosystem |
+| Hive ACID (ORC) | Native on older CDH/HDP | Tied to Hive; compaction pain; no clean multi-engine story |
+
+## Decision
+
+Use **Apache Iceberg (format v2)** for every table in every layer.
+
+## Consequences
+
+- Partition columns are derived by transforms (`months(event_time)`, `days(event_time)`), so
+  queries filter on `event_time` and still prune. When volume grew, `silver.cdr` moved from
+  monthly to daily partitions with one metadata commit and zero rewritten files
+  (see the README, partition evolution).
+- Every write is an atomic snapshot; the pipeline can read "exactly what was appended since
+  the last run" with incremental scans, which is how silver stays incremental.
+- Snapshots, manifests and delete files accumulate and must be maintained: see ADR 0007.
+- On Cloudera CDP the same tables are readable by Impala and Hive (Iceberg is GA in CDP
+  Public and Private Cloud), so the design carries over without a format migration.
+# 0002. S3-compatible object storage, RustFS in the lab
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+Enterprise lakehouses sit on HDFS (classic CDH), Apache Ozone (CDP Private Cloud) or a cloud
+object store. Iceberg is designed for object storage: it never relies on rename or directory
+listing for correctness. The lab needs something S3-compatible that runs in one container.
+
+The original plan was MinIO. On the day this lab was built (November 2026) the MinIO
+container images could not be pulled anonymously from the M4 Pro: `docker pull minio/minio`
+returned `pull access denied ... repository does not exist` and `quay.io/minio/minio`
+returned `401 UNAUTHORIZED`. A lab whose first command fails is not a lab.
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| MinIO | Best known, rich console | Images not anonymously pullable at build time; AGPL server |
+| **RustFS** | S3-compatible, single container, web console, Apache-2.0, accepts MinIO-style env vars | Younger project |
+| SeaweedFS | Mature, S3 gateway, Apache-2.0 | No comparable bucket browser for the screenshots; more moving parts |
+| Apache Ozone | The actual CDP Private Cloud object store, S3 gateway | Needs SCM + OM + datanodes + S3G: too heavy for a laptop lab |
+
+## Decision
+
+Use **RustFS 1.0.6** as the S3 endpoint (`s3` service, API on 127.0.0.1:19000, console on
+127.0.0.1:19001). Iceberg talks to it through `S3FileIO` with path-style access.
+
+## Consequences
+
+- Nothing in the code is RustFS-specific: swapping in MinIO, Ozone's S3 gateway, Ceph RGW or
+  AWS S3 is a change of endpoint and credentials in `.env` and `docker/`.
+- The Spark image has no Hadoop `s3://` connector (Iceberg does not need one). Raw files are
+  therefore read from a bind-mounted landing directory, and Iceberg's Hadoop-based orphan
+  file action cannot list the bucket; the lab does the orphan scan through Iceberg FileIO
+  instead (ADR 0007). On a CDP cluster both would use the cluster's HDFS/Ozone connector.
+# 0003. Iceberg REST catalog instead of a Hive Metastore
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+An Iceberg table needs a catalog that atomically swaps the pointer to its current metadata
+file. Cloudera CDP uses the Hive Metastore (HMS) for this, and HMS is also what Impala and
+Hive use for everything else. In the open ecosystem the Iceberg **REST catalog** protocol
+has become the engine-neutral contract (Apache Polaris, Apache Gravitino, Nessie, Unity,
+AWS Glue and Snowflake Open Catalog all implement it).
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| Hive Metastore + its RDBMS | Matches CDP exactly | Two more containers (HMS + Postgres), Thrift, Hadoop config |
+| **Iceberg REST catalog** | One small container; same HTTP contract as Polaris/Gravitino/Glue; Spark and Trino both speak it natively | The fixture server used here is a reference implementation, not hardened |
+| JDBC catalog directly from engines | Simple | Every engine needs DB credentials and drivers |
+
+## Decision
+
+Use `apache/iceberg-rest-fixture:1.8.1` with SQLite on a volume
+(`jdbc:sqlite:file:/var/lib/iceberg/catalog.db`), so tables survive restarts.
+
+## Consequences
+
+- Spark and Trino resolve `lake.<namespace>.<table>` through the same catalog, which is how
+  Trino can query the marts Spark builds, time travel included.
+- Moving to HMS on CDP means changing `spark.sql.catalog.lake.type` to `hive` and the URI; the
+  pipeline code does not change.
+- For production, replace the fixture with a governed catalog (Polaris, Gravitino, or HMS
+  with Ranger) that adds authentication, authorisation and credential vending.
+# 0004. Medallion layers with explicit contracts and quarantine
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+Telecom feeds are messy: switches retransmit, mediation systems deliver late, vendor exports
+mix timestamp formats, and a bad deploy upstream can change a field overnight. The platform
+must never lose a record silently, must not double count, and must be able to prove both.
+
+## Decision
+
+| Layer | Contract | Write pattern |
+|---|---|---|
+| **bronze** | Raw values as STRING, plus `_source_file`, `_source_date`, `_batch_id`, `_ingested_at`. Nothing is rejected. | Append; each source file exactly once (`ops.ingest_log`) |
+| **silver** | Typed, validated, deduplicated on the business key, conformed to subscribers and cells. Failed rows go to `silver.quarantine` with the first failed rule and the raw payload. | Incremental scan of new bronze snapshots, then `MERGE INTO` (newer `_ingested_at` wins) |
+| **gold** | Business-ready marts with documented grain. | `INSERT OVERWRITE` (dynamic partitions), atomic |
+| **ops** | Ingest log, silver checkpoints, data quality history. | Append |
+
+Quality is a gate, not a report: `lakehouse/quality.py` exits non-zero on any error-level
+rule so the orchestrator does not publish gold.
+
+## Why these choices
+
+- **Strings in bronze**: parsing at ingest is the most common way records disappear. A raw
+  layer that cannot fail keeps a replayable copy of exactly what arrived.
+- **Incremental by snapshot, not by timestamp column**: Iceberg snapshots are exact. A
+  watermark on `_ingested_at` breaks with clock skew and with backfills.
+- **MERGE with newer-wins**: a re-sent identical record is a no-op, a correction updates, a
+  stale re-send cannot overwrite a newer value. Covered by `tests/spark/test_iceberg_merge.py`.
+- **Quarantine with reasons**: operations can count defects per producer and per rule and
+  replay them after a fix.
+- **Reconciliation against the producer's manifest**: the generator states how many
+  duplicates and malformed rows it produced; the gate checks the pipeline removed exactly
+  that many. In production the same idea uses control totals from mediation.
+
+## Consequences
+
+- Bronze roughly doubles storage for event data. Retention on bronze (e.g. 30 to 90 days)
+  bounds that cost.
+- The first-failure rule list reports one reason per row; multi-reason reporting would need
+  an array column and is deliberately left out to keep the quarantine queryable.
+# 0005. Gold marts: atomic overwrite, panel weight, baseline churn score
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Marts and grain
+
+| Table | Grain | Consumers |
+|---|---|---|
+| `gold.daily_subscriber_usage` | subscriber x day | billing checks, customer care, BI |
+| `gold.cell_hourly_load` | cell x hour | radio planning, congestion alerting |
+| `gold.churn_features` | subscriber (as of the last day) | churn model training and scoring |
+| `gold.cell_congestion_ranking` (Scala) | cell | capacity upgrade backlog |
+
+## Rebuild by atomic overwrite
+
+Marts are derived, so they are recomputed with `INSERT OVERWRITE` and dynamic partition
+overwrite. Iceberg commits the whole overwrite as one snapshot; readers see the old or the
+new mart, never a mix. MERGE would add delete files and complexity for no benefit at this
+volume. At larger volume, recompute only the partitions touched by the incremental silver
+batch (the dates present in the batch), which the same statement already supports.
+
+## Panel weight
+
+The generator models a **probe panel**: each synthetic subscriber stands for
+`--panel-weight` real subscribers (default 60). Concurrency per cell-hour uses Little's law
+(busy seconds / 3600) and is multiplied by the weight before it is compared with the cell's
+engineered capacity. Without the weight a 2,000-subscriber lab would never load a cell. The
+weight is a single explicit parameter, recorded in `docs/results/gold_last_run.json`.
+
+## Baseline churn score
+
+`churn_risk_score` is a hand-weighted, explainable score:
+
+| Signal | Weight |
+|---|---|
+| usage decline (last two days vs. first two days) | 0.35 |
+| dropped call rate (saturates at 10 %) | 0.25 |
+| prepaid segment | 0.15 |
+| tenure under 180 days | 0.15 |
+| fewer than 4 active days in the window | 0.10 |
+
+It exists to give the mart a meaningful, testable column and a baseline to beat. The
+follow-up repository *masterfabric-airflow-mlops* trains and registers a real model on these
+features and compares it with this baseline using the generator's held-out labels.
+# 0006. Spark for pipelines, Trino for interactive SQL
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+A Cloudera estate typically runs Spark on YARN for pipelines, Hive (on Tez) for batch SQL,
+and Impala for low-latency interactive SQL, all over the same tables. The lab needs the same
+split at laptop scale.
+
+## Decision
+
+- **Spark 3.5.5** (PySpark plus one Scala job) for bronze, silver, gold, quality and table
+  maintenance. Jobs run with `local[4]` inside the Spark container; on a cluster the only
+  change is `--master yarn` (or Kubernetes) and executor sizing.
+- **Trino 475** as the interactive MPP engine, the stand-in for **Impala**: long-running
+  coordinator/worker daemons, in-memory pipelined execution, no per-query JVM start-up, ANSI
+  SQL, Iceberg connector with time travel. It reads the same tables via the same REST catalog.
+
+## Mapping to Cloudera CDP
+
+| Lab | CDP equivalent |
+|---|---|
+| Spark local mode in a container | Spark on YARN (CDP Private Cloud Base) or CDE |
+| Trino | Impala (CDW / Base), with Hive LLAP/Tez for heavy batch SQL |
+| `spark-shell -I` Scala job | Scala Spark application submitted to YARN |
+| Jupyter in the Spark image | Cloudera Machine Learning (CML) sessions / Hue notebooks |
+| `make` targets | Oozie, Airflow (CDE) or Control-M |
+
+## Consequences
+
+- Spark jobs pay 2 to 3 seconds of JVM start-up each; this is visible in the per-layer
+  timings and is the reason interactive questions go to Trino, not to spark-sql.
+- Trino has no Kerberos/Ranger configured here. On CDP, Impala inherits Ranger policies and
+  Kerberos from the cluster; see the security notes in the README.
+# 0007. Merge-on-read writes with scheduled compaction and snapshot expiry
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+`silver.cdr` receives small, frequent correction batches (re-rated and late CDRs). With
+copy-on-write, every MERGE rewrites each data file that contains a matched row: cheap reads,
+expensive writes. With merge-on-read, a MERGE writes small data files plus position-delete
+files: cheap writes, reads that must apply deletes until compaction.
+
+## Decision
+
+- `silver.cdr` uses **merge-on-read** for MERGE, UPDATE and DELETE.
+- Maintenance is a scheduled job, in this order:
+  1. `rewrite_data_files` (binpack; `rewrite-all` after a partition-spec change so old files
+     move to the new spec; `remove-dangling-deletes`)
+  2. `rewrite_position_delete_files`
+  3. `expire_snapshots` (keep the last N, here 3; in production keep 5 to 7 days so time
+     travel covers a full weekly reconciliation)
+  4. orphan file scan, with a minimum age of 24 h
+- Orphan scan through **Iceberg FileIO** (`listPrefix` vs. every file referenced by any
+  snapshot, manifest or metadata version), because Iceberg's built-in action lists storage
+  through a Hadoop `FileSystem` and the Spark image has no `s3://` Hadoop connector.
+
+## Evidence
+
+The demo applies 10 correction micro-batches and then compacts. The measured file counts,
+delete files, snapshot counts and query times before and after are in
+`docs/results/iceberg_demos.json` and in the README.
+
+## Consequences
+
+- Readers between compactions pay for delete files; the compaction cadence (hourly for hot
+  partitions, daily for the rest) is the knob.
+- Snapshot expiry ends time travel beyond the retained window. That is a governance decision
+  (how far back must an auditor be able to look?) and must be agreed with the data owner.
+- The Iceberg guard that refuses an orphan scan younger than 24 h is kept on purpose: a file
+  being written by a concurrent job looks exactly like an orphan.
+# 0001. Kafka in KRaft mode as the event backbone, keyed by cell
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+Radio network performance counters arrive from OSS/mediation systems continuously, from thousands
+of cells, with bursts after collection cycles and occasional re-sends. Several consumers need the
+same feed: raw capture, aggregation, anomaly detection, and later other teams. In Cloudera CDP this
+is the Streams Messaging (Kafka) service; Flume or NiFi typically feed it.
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| **Apache Kafka 3.9, KRaft** | Industry standard log; replay by offset; consumer independence; same API as CDP Streams Messaging, Confluent, MSK, Event Hubs | One more stateful service to run |
+| Kafka with ZooKeeper | Matches older CDP 7.1 clusters | ZooKeeper mode is deprecated and removed in Kafka 4.0 |
+| Redpanda | Kafka API, single binary | Not Apache-licensed (BSL); not what the target estate runs |
+| Read files from a landing directory | No broker | No replay by offset, no back-pressure, no multiple independent readers |
+
+## Decision
+
+- A single `apache/kafka:3.9.1` broker in KRaft mode (combined broker + controller), with an
+  internal listener for containers and a second listener advertised on `127.0.0.1` for the host.
+- `cell.kpi`: 6 partitions, 24 h retention, **message key = cell_id**. Per-cell ordering is
+  preserved within a partition, and partitions are the unit of parallelism for the Spark source.
+- `cell.alerts`: 3 partitions, `cleanup.policy=compact,delete`, key = cell_id, so a consumer that
+  starts late can rebuild the latest alert state per cell.
+- Auto topic creation is off; topics are created by an init container with explicit settings.
+- The producer is idempotent (`enable.idempotence=true`, `acks=all`), zstd-compressed and batches
+  with `linger.ms=20`.
+
+## Consequences
+
+- Keying by cell means partition sizes follow the hash of the cell IDs. In the live run the six
+  partitions held between 8.3k and 11.5k messages at the same moment (see the Kafka UI screenshot).
+  With thousands of cells this evens out; with few hot keys it would not.
+- Replication factor 1, no TLS/SASL, PLAINTEXT listeners. All of that is a laptop simplification;
+  production needs RF=3, `min.insync.replicas=2`, TLS and SASL/Kerberos (CDP) or mTLS, and ACLs per
+  consumer group.
+
+## Enterprise mapping
+
+CDP Streams Messaging (Kafka + Schema Registry + Streams Messaging Manager). kafbat/kafka-ui stands
+in for Streams Messaging Manager in this lab.
+# 0002. Spark Structured Streaming rather than Flink for this lab
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+The stream processor has to: parse and validate events, handle event time with late and duplicate
+data, aggregate per cell and minute, keep per-cell state for detection, and write to Iceberg with
+exactly-once effects. Cloudera offers both Spark (Data Engineering) and Flink (Streaming Analytics).
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| **Spark Structured Streaming 3.5** | One engine and one skill set for batch (see the lakehouse lab) and streaming; first-class Iceberg sink and source; `applyInPandasWithState` for arbitrary per-key state in Python; RocksDB state store | Micro-batch: end-to-end latency is seconds, not milliseconds |
+| Apache Flink 1.20 | True record-at-a-time processing, millisecond latency, rich timers and state TTL | A second engine to operate; PyFlink state APIs are less mature than Java; heavier on a 24 GB laptop next to Kafka, Spark and storage |
+| Kafka Streams | Lightweight, library not cluster | JVM only, no Iceberg sink, state tied to Kafka topics |
+
+## Decision
+
+Spark Structured Streaming 3.5.5, local mode with 4 cores inside the container, RocksDB state store,
+6 shuffle partitions (one per Kafka partition). Three queries in one driver (ADR 0004).
+
+## Consequences
+
+- Network-alarm latency here is "seconds", which matches how NOC alarms are consumed (people and
+  ticketing systems), but not sub-second use cases such as real-time charging or fraud blocking,
+  where Flink is the better choice.
+- Detection logic is plain Python (`streaming/detector.py`) and runs unchanged offline with pandas
+  (`streaming/offline.py`), which made tuning and testing cheap.
+- Watermarks only advance between micro-batches. With a simulated clock this matters: at 30x
+  speed a 2-second trigger spans one simulated minute. ADR 0003 discusses it.
+
+## Enterprise mapping
+
+CDP Data Engineering / Data Hub Spark 3, or Cloudera Streaming Analytics (Flink) for lower latency.
+# 0003. Event time, a 2-minute watermark and dedupe within the watermark
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+The producer deliberately delivers like a real mediation chain: about 3% of reports arrive 5-60
+seconds late and out of order, about 0.1% arrive 5-10 minutes late, and about 0.5% are re-sent
+with the same `event_id`. Windowing by arrival time would put a report in the wrong minute;
+keeping every window open forever would grow state without bound.
+
+## Decision
+
+- All windows are on **event time** (`event_ts` from the payload), 1-minute tumbling windows.
+- **Watermark = max event time seen - 2 minutes.** Windows are emitted in append mode only once
+  the watermark passes them, so silver never contains a partial minute that is later revised.
+- **`dropDuplicatesWithinWatermark(event_id)`** (Spark 3.5) removes re-sends with state bounded by
+  the same watermark, instead of keeping every ID ever seen.
+- Bronze does **not** apply the watermark: it keeps every delivered record, duplicates and very
+  late ones included, so the raw truth of what arrived is auditable and replayable.
+
+## Consequences
+
+- Reports later than the watermark are dropped from silver (they remain in bronze). The evaluator
+  measures the gap as `bronze unique events - silver reports`.
+- The last two simulated minutes of a run are never emitted, because the watermark never passes
+  them once input stops. The evaluator excludes incidents that start in that tail.
+- Watermarks advance per micro-batch. With a simulated clock, the trigger interval in simulated
+  time is `trigger seconds x speed`; at the 120x smoke-test speed a 5-second trigger spans
+  10 simulated minutes, so even the "very late" reports landed in time. The live run therefore uses
+  30x and a 2-second silver trigger (1 simulated minute).
+
+## Enterprise mapping
+
+The same semantics exist in Flink (bounded out-of-orderness watermarks) and in Kafka Streams
+(grace periods). The right lateness bound is a business decision: how long NOC dashboards may
+show a minute as incomplete.
+# 0004. Iceberg tables, not topics, as the hand-off between streaming stages
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+Detection needs finalised 1-minute windows. The windows could be passed on through another Kafka
+topic, kept inside one big query, or written to a table that the detector reads as a stream.
+
+## Decision
+
+- Bronze and silver are **independent queries** on the Kafka source with their own checkpoints, so
+  a slow aggregation never delays raw capture, and either can be restarted alone.
+- Silver writes finalised windows to the Iceberg table `rt.kpi_1m`. The detector reads that table
+  as a **streaming Iceberg source** and keeps its own checkpoint.
+- Alerts go to the Iceberg table `rt.alerts` **and** to the Kafka topic `cell.alerts`: the table for
+  analysis and audit, the topic for systems that react (ticketing, NOC screens).
+
+## Consequences
+
+- The contract between aggregation and detection is a table: it can be queried by any engine,
+  time-travelled, replayed into a new detector version, and backfilled by batch jobs.
+- Each stage adds a commit interval. In the live run most of the alert latency comes from the
+  silver stage (watermark wait + trigger) and the detector trigger; the numbers are in the README.
+- Streaming commits create many small files and snapshots. The tables set
+  `write.metadata.delete-after-commit.enabled` and `previous-versions-max=20`, and
+  `streaming/maintenance.py` compacts data files and expires snapshots after a run.
+- The Iceberg streaming source stores its offsets through the table's FileIO; with local
+  checkpoints the catalog uses `ResolvingFileIO` (S3 for data, local files for offsets).
+
+## Alternatives considered
+
+- **A Kafka topic for windows**: lower latency, but no SQL access, retention-bound replay and a second
+  schema to govern.
+- **One query with aggregation and detection chained**: fewer moving parts, but two stateful
+  operators with different state shapes in one checkpoint, and no reusable silver table.
+# 0005. Per-cell adaptive baselines and a Bernoulli CUSUM instead of a trained model
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+A NOC needs alarms that are explainable, typed (what is wrong) and fast, for thousands of cells
+whose "normal" differs by cell and by hour of the day. Static thresholds are what many estates
+still use, and they alarm on every busy cell at peak time.
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| Static thresholds | Simple, explainable | Same threshold for every cell and hour; noisy at peak, blind at night |
+| **Per-cell EWMA baselines + rules + CUSUM** | Explainable evidence per alert; a few floats of state per cell; learns each cell's normal online; typed alerts | Hand-chosen thresholds; needs a warm-up |
+| Isolation forest / autoencoder per cell | Catches unknown patterns | Needs training data and a model lifecycle; scores are hard to explain to field teams; untyped |
+| Seasonal forecasting (Prophet, ARIMA) | Models daily cycles explicitly | Heavy per cell; needs weeks of history |
+
+## Decision
+
+The detector (`streaming/detector.py`) combines:
+
+1. **Hard rules**: availability below 50% means an outage. A cell that reports itself available while
+   more than 50% of at least 20 RRC attempts fail is a sleeping cell. Both fire from the first window.
+2. **EWMA baselines** (alpha 0.05, about 20 minutes of memory) of mean and variance per KPI per cell.
+   Congestion = PRB at or above 95% **and** latency z of 4 or more. Interference = SINR z of -4 or
+   less. Both need two consecutive windows.
+3. A **Bernoulli CUSUM** on RRC setup failures (log-likelihood ratio of p1 = max(4 p0, p0 + 1.5%)
+   against the cell's learned p0) for slow degradations.
+
+Baselines freeze while a window looks anomalous or an alert is open. An alert closes after three
+healthy windows. State is serialised as JSON in Spark's `applyInPandasWithState`.
+
+## How it was tuned, and how it is judged
+
+- Thresholds were tuned **offline** on the development seed (7) with `streaming/offline.py`, which
+  runs the same detector code with pandas. A Gaussian z-score on the failure rate gave 88 false
+  alerts there: failures are small counts (about 0.5 per minute), so a normal approximation is wrong.
+  Switching to the count model cut that to 15 at the same recall. The CUSUM threshold sweep
+  (8 to 16 nats) is in `docs/results/offline_dev_seed7.json`; 14 was chosen (1 false alert, 8.5-minute
+  median delay for degradations).
+- The live pipeline is scored on a **different seed (2026)** that was not used for tuning.
+
+## Consequences
+
+- Every alert carries its evidence (KPIs, z-scores, CUSUM) as JSON, so a field engineer can see why.
+- Unknown failure patterns that do not move PRB, latency, SINR, availability or RRC success are not
+  caught. That is the place for an ML model, alongside the rules rather than instead of them
+  (see the MLOps lab).
+- The synthetic network makes the problem easier than reality: incidents are clean and labelled,
+  and there are no correlated multi-cell failures (a site power cut, a transport link) other than
+  flash crowds.
+# 0006. Exactly-once effects: checkpoints, idempotent MERGE, keyed at-least-once alerts
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+A restart must not lose events, double-count windows or raise the same alert twice in the tables.
+
+## Decision
+
+| Hop | Guarantee | Mechanism |
+|---|---|---|
+| Producer -> Kafka | No duplicates from producer retries | Idempotent producer, `acks=all` |
+| Mediation re-sends | Removed in silver | `dropDuplicatesWithinWatermark(event_id)` |
+| Kafka -> bronze / silver (Iceberg) | Exactly-once | Offsets in the query checkpoint; the Iceberg sink commits a micro-batch once per batch ID |
+| silver -> detector state | Exactly-once state updates | Iceberg source offsets + RocksDB state in the checkpoint; windows at or before the state's `last_window` are skipped |
+| detector -> `rt.alerts`, `rt.cell_health` | Effectively exactly-once | `foreachBatch` is at-least-once, so both writes are `MERGE` statements keyed on `(alert_id, status)` and `cell_id` |
+| detector -> Kafka `cell.alerts` | At-least-once | Keyed by cell, carries `alert_id` + `status`; consumers deduplicate, the compacted topic converges |
+
+## Consequences
+
+- Checkpoints live on a local Docker volume. In production they belong on HDFS or S3 (s3a) with the
+  same durability as the tables.
+- Kafka transactions for the alert topic were not used: the downstream consumers (ticketing) already
+  need idempotency on `alert_id`, and transactions would couple the Spark batch to the broker.
+# 0007. JSON with an explicit schema contract; Avro/Protobuf + registry in production
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+Producers and consumers must agree on the payload. Inferring a schema from data in a stream is
+fragile, and a wrong guess silently corrupts downstream tables.
+
+## Decision
+
+- Payloads are JSON with a schema version field `v` (currently 1).
+- Spark parses them with an **explicit** `StructType` (`streaming/schema.py`) in PERMISSIVE mode.
+  A malformed payload becomes a bronze row with `parse_ok = false` and its raw text, and is excluded
+  from silver. Nothing is dropped silently.
+- No schema registry runs in the lab.
+
+## Consequences
+
+- JSON is human-readable in Kafka UI (useful for a lab and for the screenshots) but is 3-5x larger
+  than Avro and has no enforced compatibility rules.
+- In production: Avro or Protobuf with a schema registry (Cloudera Schema Registry or Confluent),
+  `BACKWARD` compatibility, and producers that cannot publish an incompatible schema.
+# 0001. One Airflow run per month, backfilled in order with catchup
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+A churn model at a telco is refreshed on the billing cycle: a subscriber snapshot lands every month and
+the churn label for that snapshot is only known a month later. Each month's decision (keep, retrain,
+promote) depends on the registry state that the previous month left behind. The lab has to replay a
+year of that history reproducibly on a laptop.
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| Cron + scripts | Minimal | No lineage, no retries, no per-task state or UI; backfills are manual |
+| **Airflow 2.10, `@monthly`, `catchup=True`, `max_active_runs=1`** | Logical dates map 1:1 to months; backfill is just "unpause"; retries, branching and a UI out of the box; what CDE runs | Scheduler and metadata DB to operate |
+| Kubeflow / Argo pipelines | Container-native, good for heavy training | Needs Kubernetes; the training here is seconds, not hours |
+| Dagster / Prefect | Asset-oriented, nice local dev | Less common in Cloudera estates (CDE ships Airflow) |
+
+## Decision
+
+`dags/churn_monthly.py` runs `@monthly` from 2025-12-01 to 2026-11-01 with `catchup=True` and
+`max_active_runs=1`, so the twelve months execute strictly in order. The month is passed to every task
+as `{{ logical_date.strftime('%Y-%m') }}`; tasks are thin wrappers around `mlops/pipeline.py` so the
+same logic is unit-testable without Airflow. `LocalExecutor` with PostgreSQL is enough for one DAG.
+
+## Consequences
+
+- The full year replays in about 10 minutes (task time per month 1.2–8.4 s; the rest is scheduling).
+- Re-running a month is idempotent: every table write is an upsert keyed by month.
+- The 2026-11 run is not due until December under `@monthly`; it was triggered manually with the same
+  logical date (`airflow dags trigger -e 2026-11-01`). Documented in Limitations.
+- Production: CDE's managed Airflow, with the CeleryExecutor or KubernetesExecutor and training jobs
+  dispatched to CDE Spark or CML rather than run inside the worker.
+# 0002. A blocking data-quality gate that halts the month
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+A broken upstream feed (nulls, negative fees after a billing migration, a missing column) silently
+poisons three things at once: drift statistics, the next training set and the scores sent to CRM.
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| Warn and continue | Never blocks the business | Bad data reaches training and the retention list |
+| **Critical rules block; warnings are recorded** | Bad months never reach models or customers; warnings keep noise low | A false positive blocks a month (needs an override path) |
+| Impute and continue | Keeps the cadence | Hides the incident; imputed training data |
+
+## Decision
+
+`mlops/quality.py` runs 11 rules on every snapshot: 9 critical (schema complete, minimum rows, unique
+`subscriber_id`, null rate ≤ 1% per column, non-negative fee, ranges for dropped-call rate, NPS and
+tenure, binary 5G flag) and 2 warnings (row-count change ≤ 20%, only catalogued tariffs). `dq_gate` is a
+`BranchPythonOperator`: any critical failure routes to `halt_month`, which skips drift, training and
+scoring for that month. Results land in `mlops.dq_results`.
+
+A month that fails the gate is also excluded from future training windows (`labelled_months`).
+
+## Consequences
+
+- Measured: the injected 2026-03 failure was caught (`null_rate_max`, `monthly_fee_non_negative`), the
+  month was halted, and March never entered a training or holdout set: v1 was held out on 2026-04
+  and v2 trained on 2026-02, 2026-04 and 2026-05.
+- The new `postpaid_5g` tariff (2026-07) is catalogued, so it does not trip `plan_known`; it shows up
+  as drift instead, which is the intended signal.
+- Production: the same rules as Great Expectations or Deequ suites, with an explicit "release month"
+  override recorded in the audit log.
+# 0003. MLflow registry aliases as the deployment contract
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+Training and serving must agree on which model is live without a redeploy, and rollback must be a
+metadata change. MLflow 2.9+ deprecates stages (Staging/Production) in favour of aliases.
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| Stages (`Production`) | Familiar | Deprecated; one model per stage |
+| **Aliases `@champion` and `@static_baseline`** | Any number of named pointers; atomic move; consumers resolve `models:/churn@champion` | Consumers must re-resolve (poll or webhook) |
+| Copy the artefact to a fixed path | No registry needed | No lineage, no audit, race conditions |
+
+## Decision
+
+Every challenger is registered as a new version of `churn` with tags `holdout_auc`, `holdout_month`,
+`train_months` and `trained_in_month` (and `rejected_reason` if it lost). Promotion is
+`set_registered_model_alias("churn", "champion", v)`. The first champion also gets `@static_baseline`
+and keeps it forever: it is the "never retrain" policy that the realised-AUC comparison is run against.
+Batch scoring writes both policies' scores every month.
+
+## Consequences
+
+- Rejected challengers stay in the registry with the reason (v2: `auc 0.7816 < champion 0.7819 + 0.002`).
+- Rollback is one call; measured end to end in [0006](0006-serving-hot-swap.md).
+- Production: CML Model Registry (MLflow-compatible), with alias changes gated by an approval step.
+# 0004. Retrain on evidence: decay, drift or age
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+Retraining on a fixed schedule wastes compute when nothing changed and is too slow when the market
+moves (a new tariff, a competitor offer). Retraining only on realised performance is late by design:
+churn labels arrive a month after the scores.
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| Fixed schedule only | Predictable | Blind between runs |
+| Realised performance only | Directly measures harm | Lags by the label delay |
+| **Any of: performance decay, input drift, maximum age** | Drift reacts before labels arrive; decay catches concept drift that PSI cannot see; age bounds staleness | Three thresholds to tune |
+
+## Decision
+
+`decide` (in `mlops/pipeline.py`) retrains when any of these holds:
+
+- **no champion** yet and at least 4 labelled months exist (3 to train, 1 holdout);
+- **performance decay**: last realised AUC < champion's holdout AUC − 0.03;
+- **data drift**: maximum feature PSI > 0.25 against a 20k-row sample of the champion's training data
+  (stored as `reference/churn/vN.parquet`);
+- **scheduled**: champion trained 6 or more months ago.
+
+The reasons are stored in `mlops.decisions` with their evidence (realised vs validation AUC, PSI feature).
+
+## Consequences
+
+Measured over the year: 2026-07 retrained on drift (`plan` PSI 0.3151, the new tariff) but the challenger
+lost; 2026-08 retrained on decay **and** drift and won (0.819 vs 0.7796); 2026-09 retrained on drift
+(`plan` 0.28 vs v3's data) and won (0.8249 vs 0.8188); 2026-10 and 2026-11 kept v4. The `scheduled`
+trigger never fired in a 12-month window with this much change.
+# 0005. Sliding 3-month window, newest labelled month as holdout, minimum gain to promote
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+Champion and challenger must be compared on data neither has seen, and on data that looks like the
+next month, not like a random split of the past.
+
+## Decision
+
+- Train on the 3 most recent labelled months that passed the gate; hold out the newest labelled month.
+- Score the current champion on the **same** holdout. Promote only if
+  `challenger AUC ≥ champion AUC + 0.002`; otherwise register the challenger with `rejected_reason`.
+- Model: scikit-learn `HistGradientBoostingClassifier` (lr 0.06, 300 iterations, 31 leaves, min 80 per
+  leaf) behind a one-hot encoder for the categorical columns, logged with an MLflow signature.
+
+## Options considered
+
+| Option | Against |
+|---|---|
+| Random train/test split | Leaks future behaviour into training; overstates AUC under drift |
+| Expanding window | Old regime dominates after a tariff change |
+| Promote on any gain | Promotes noise; churns the registry |
+
+## Consequences
+
+- Measured: v2 (2026-07) lost by 0.0003 AUC and was rejected; v3 and v4 won by 0.039 and 0.006.
+- Realised AUC is still the ground truth: it is computed next month on labels no model saw.
+- An oracle AUC (the generator's own churn probabilities, 0.81–0.84 per month) bounds what any model
+  could reach on this data; auto reached 0.830 in 2026-10 vs an oracle of 0.841.
+# 0006. Online API resolves @champion and hot-swaps without a restart
+
+- Status: Accepted
+- Date: 2026-11-21
+
+## Context
+
+Monthly batch scores feed the CRM retention list, but online channels (call centre, app) need a score
+for one subscriber now, from the same model the batch used.
+
+## Options
+
+| Option | For | Against |
+|---|---|---|
+| Bake the model into the image | Immutable | A redeploy per promotion; rollback is a redeploy |
+| Registry webhook → reload | Instant | Needs the webhook plumbing (not in OSS MLflow 2.22) |
+| **Poll the alias every 15 s, swap atomically** | Simple, works with OSS MLflow; rollback is an alias move | Up to one poll interval of lag |
+| MLflow `models serve` per version | Zero code | One process per version; no alias following |
+
+## Decision
+
+`serving/app.py` (FastAPI) resolves `models:/churn@champion` at start-up and re-checks the alias every
+15 s; when the version changes it loads the new pyfunc model and swaps a reference under a lock. MLflow's
+signature enforcement is kept on, so a wrongly typed request fails loudly instead of being cast silently.
+
+## Consequences
+
+- Measured: 200 single-subscriber requests p50 2.67 ms, p95 2.93 ms; a 1000-row batch in 11.4 ms; max
+  absolute difference to the offline batch scores 5.0e-6.
+- Measured rollback: moving `@champion` v4 → v3 was served after 3.41 s and v3 → v4 after 15.27 s,
+  bounded by the poll interval; no restart.
+- Signature enforcement caught a real bug during the build: the request model declared `discount_pct`
+  as float while the trained signature says integer.
+- Production: CML Model Endpoints or KServe behind the API gateway, with the same alias contract.
