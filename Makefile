@@ -25,7 +25,7 @@ bench: ## Run every experiment (about 25 minutes on an M4 Pro)
 concurrency prefill kvcache promptcache perplexity: ## Run one experiment
 	bench/run_matrix.sh $@
 
-mlx: ## MLX vs llama.cpp, long-context curve and speculative decoding (about 25 minutes)
+mlx: ## MLX vs llama.cpp, long-context curve and speculative decoding (about 20 minutes)
 	bench/run_mlx.sh all
 
 mlx-concurrency mlx-single ctx spec: ## Run one MLX-related experiment

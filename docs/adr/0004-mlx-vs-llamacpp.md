@@ -41,9 +41,9 @@ size, servers differ in how they batch, and one engine can stop generating earli
   keeps more precision where it matters; per unit of quality the comparison is much closer.
 - At 8-bit the engines are within 5–10% of each other on one request; under load llama.cpp's slot
   scheduler kept higher throughput (340 vs 269 tok/s at 4 concurrent).
-- MLX's throughput fell from 4 to 8 concurrent requests (474 → 360 tok/s mean), and one of the 24
-  requests at 8 concurrent failed on the client side in both runs and for both MLX models; llama.cpp
-  had no errors. The cause was not investigated.
+- MLX 4-bit throughput fell from 4 to 8 concurrent requests (474 → 361 tok/s mean), and at 8
+  concurrent 3 of 96 MLX requests failed on the client side (1 for 4-bit, 2 for 8-bit, over two runs);
+  llama.cpp had no errors. The cause was not investigated.
 - llama.cpp stays the default for the on-prem stack (one engine for Metal, CPU and CUDA, GGUF in
   PVCs). MLX is the faster choice for a single Mac serving a few users with 4-bit weights, if the
   quality loss is acceptable for the task.
