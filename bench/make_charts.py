@@ -75,11 +75,11 @@ def kv_and_quant():
     names = [r["kv_type"] for r in kv]
     a.bar(names, [r["kv_buffer_mib"] or 0 for r in kv], color=[HEX["ICE"], HEX["GREEN"]])
     for i, r in enumerate(kv):
-        a.text(i, (r["kv_buffer_mib"] or 0) * 1.02, f"{r['kv_buffer_mib']} MiB\n{r['output_tok_s']:.0f} tok/s\nTTFT {r['ttft_p50_s']:.2f}s",
+        a.text(i, (r["kv_buffer_mib"] or 0) * 1.02, f"{r['kv_buffer_mib']:.0f} MiB (computed)\nserver RSS {r['server_rss_mib']:.0f} MiB\n{r['output_tok_s']:.1f} tok/s · TTFT {r['ttft_p50_s']:.2f}s",
                ha="center", va="bottom", fontsize=9)
-    a.set_ylim(0, max(r["kv_buffer_mib"] or 0 for r in kv) * 1.45)
-    a.set_title("KV cache type at 32k context (4 × 6k-token prompts)", loc="left", fontsize=11)
-    a.set_ylabel("KV buffer (MiB)")
+    a.set_ylim(0, max(r["kv_buffer_mib"] or 0 for r in kv) * 1.6)
+    a.set_title("KV cache type, 32k context (4 × ~5.6k-token prompts)", loc="left", fontsize=11)
+    a.set_ylabel("KV buffer for 32k tokens (MiB)")
     a = axes[1]
     labels = ["cache off\n1st", "cache off\nrepeat", "cache on\n1st", "cache on\nrepeat"]
     vals = [pc["cache_prompt_false"]["first_ttft_s"], pc["cache_prompt_false"]["repeat_ttft_s"],
