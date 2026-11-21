@@ -1,0 +1,33 @@
+{
+  "note": "Second run of the CPU container at 1 and 4 concurrent requests, to check the Q8_0 > Q4_K_M result at 4 slots.",
+  "runs": {
+    "q4_k_m": [
+      {
+        "concurrency": 1,
+        "output_tok_s": 109.72,
+        "itl_ms_p50": 8.48,
+        "ttft_p50_s": 0.077
+      },
+      {
+        "concurrency": 4,
+        "output_tok_s": 181.13,
+        "itl_ms_p50": 20.92,
+        "ttft_p50_s": 0.031
+      }
+    ],
+    "q8_0": [
+      {
+        "concurrency": 1,
+        "output_tok_s": 108.72,
+        "itl_ms_p50": 8.79,
+        "ttft_p50_s": 0.047
+      },
+      {
+        "concurrency": 4,
+        "output_tok_s": 334.56,
+        "itl_ms_p50": 11.34,
+        "ttft_p50_s": 0.022
+      }
+    ]
+  }
+}
