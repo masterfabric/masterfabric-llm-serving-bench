@@ -1,0 +1,396 @@
+{
+  "engine": "mlx",
+  "target": "Qwen2.5-7B-Instruct-4bit",
+  "draft": "Qwen2.5-0.5B-Instruct-8bit",
+  "max_tokens": 256,
+  "configs": [
+    {
+      "draft_tokens": null,
+      "summary": {
+        "structured": {
+          "decode_tok_s_mean": 59.86
+        },
+        "open": {
+          "decode_tok_s_mean": 59.09
+        },
+        "all": {
+          "decode_tok_s_mean": 59.48
+        }
+      },
+      "rows": [
+        {
+          "group": "structured",
+          "id": "s1",
+          "text": "Certainly! Below is a Python function `parse_iso_date` that takes a string in ISO format and returns a `datetime.date` object. I've also included five pytest test functions to ensure the function works as expected.\n\n```python\nfrom datetime import date\nfrom typing import Literal\n\ndef parse_iso_date(s: str) -> date:\n    \"\"\"\n    Parse a string in ISO format (YYYY-MM-DD) to a datetime.date object.\n\n    :param s: A string representing a date in ISO format.\n    :return: A datetime.date object corresponding to the input string.\n    \"\"\"\n    year, month, day = map(int, s.split('-'))\n    return date(year, month, day)\n\n# Test functions\nimport pytest\n\ndef test_parse_iso_date_valid():\n    assert parse_iso_date(\"2023-10-05\") == date(2023, 10, 5)\n\ndef test_parse_iso_date_invalid_format():\n    with pytest.raises(ValueError):\n        parse_iso_date(\"2023-10-55\")\n\ndef test_parse_iso_date_invalid_year():\n    with pytest.raises(ValueError):\n        parse_iso_date(\"2023-13-05\")\n\ndef test_parse_iso_date_invalid_month():\n   ",
+          "tokens": 256,
+          "decode_tok_s": 59.8,
+          "draft_accepted": null,
+          "peak_memory_mib": 5204.2
+        },
+        {
+          "group": "structured",
+          "id": "s2",
+          "text": "Certainly! Below is the PostgreSQL DDL (Data Definition Language) for the `customers`, `orders`, and `order_items` tables, including primary keys, foreign keys, `NOT NULL` constraints, and an index on each foreign key.\n\n```sql\n-- Create the customers table\nCREATE TABLE customers (\n    customer_id SERIAL PRIMARY KEY,\n    first_name VARCHAR(50) NOT NULL,\n    last_name VARCHAR(50) NOT NULL,\n    email VARCHAR(100) NOT NULL UNIQUE,\n    phone VARCHAR(20) NOT NULL,\n    address VARCHAR(255),\n    city VARCHAR(100),\n    state VARCHAR(100),\n    zip_code VARCHAR(20),\n    country VARCHAR(100)\n);\n\n-- Create the orders table\nCREATE TABLE orders (\n    order_id SERIAL PRIMARY KEY,\n    customer_id INT NOT NULL,\n    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    order_total DECIMAL(10, 2) NOT NULL,\n    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE\n);\n\n-- Create the order_items table\nCREATE TABLE order_items (\n    item_id SERIAL PRIMARY KEY,\n    order_id INT NOT NULL,\n    product_name VARCHAR(255) NOT NULL,\n",
+          "tokens": 256,
+          "decode_tok_s": 59.78,
+          "draft_accepted": null,
+          "peak_memory_mib": 5204.2
+        },
+        {
+          "group": "structured",
+          "id": "s3",
+          "text": "```yaml\nservice:\n  name: rag-api\n  replicas: 2\n  ports:\n  - 8000\n  - 9090\n  env:\n    TOP_K: 4\n    MIN_SCORE: 0.55\n    LOG_LEVEL: info\n  resources:\n    requests:\n      cpu: 250m\n      memory: 256Mi\n    limits:\n      cpu: 1\n      memory: 512Mi\n```",
+          "tokens": 106,
+          "decode_tok_s": 60.15,
+          "draft_accepted": null,
+          "peak_memory_mib": 5245.2
+        },
+        {
+          "group": "structured",
+          "id": "s4",
+          "text": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty, forty-one, forty-two, forty-three, forty-four, forty-five, forty-six, forty-seven, forty-eight, forty-nine, fifty, fifty-one, fifty-two, fifty-three, fifty-four, fifty-five, fifty-six, fifty-seven, fifty-eight, fifty-nine, sixty, sixty-one, sixty-two, sixty-three, sixty-four, sixty-five, sixty-six, sixty-seven, sixty-eight, sixty-nine, seventy, seventy-one, seventy-two, seventy-three, seventy-four, seventy-five, seventy-six, seventy-seven, seventy-eight, seventy-nine, eighty",
+          "tokens": 214,
+          "decode_tok_s": 59.71,
+          "draft_accepted": null,
+          "peak_memory_mib": 5245.2
+        },
+        {
+          "group": "open",
+          "id": "o1",
+          "text": "In the context of Large Language Models (LLMs) serving, particularly those using Transformer architectures, the trade-offs between PagedAttention and a contiguous KV (Key-Value) cache are significant. Let's break down each concept and the trade-offs involved.\n\n### PagedAttention\n\nPagedAttention is a technique designed to optimize the attention mechanism in Transformers, especially for long sequences. The standard attention mechanism requires storing the entire key and value matrices in memory, which can be prohibitive for long sequences. PagedAttention addresses this by dividing the sequence into smaller \"pages\" and processing them in a batched manner.\n\n#### Key Features of PagedAttention:\n1. **Memory Efficiency**: By processing smaller chunks of the sequence at a time, PagedAttention reduces the memory footprint required for the attention mechanism.\n2. **Parallel Processing**: It allows for parallel processing of attention scores, which can be beneficial for performance.\n3. **Scalability**: It is particularly useful for very long sequences, where the memory requirements of the standard attention mechanism would be impractical.\n\n#### Trade-offs:\n1. **Increased Computational Overhead**: Processing the sequence in smaller pages introduces additional computational overhead due to the need to manage and process these pages.\n2. **Complexity**: The implementation of P",
+          "tokens": 256,
+          "decode_tok_s": 59.46,
+          "draft_accepted": null,
+          "peak_memory_mib": 5245.2
+        },
+        {
+          "group": "open",
+          "id": "o2",
+          "text": "In the quiet, unassuming town of Millbrook, nestled between rolling hills and whispering woods, lived a network engineer named Eli. Eli was a man of few words, with a penchant for the quiet moments that most people found boring. His days were spent in the cool, dimly lit server room of Millbrook Telecom, where he maintained the backbone of the town's internet infrastructure. But at 3 a.m., Eli was a different man. He was a night owl, a troubleshooter, and a guardian of the digital realm.\n\nOne chilly winter night, as the moon hung low and the stars twinkled like distant fires, Eli found himself at his desk, sipping on a cup of cold coffee. The server room was a sanctuary, a place where the world outside seemed to fade away. The hum of the servers was a soothing lullaby, and the glow of the monitors cast a warm light over the rows of humming machines.\n\nAt 3:00 a.m., Eli's phone rang. It was a call from the town's mayor, who was frantically trying to reach the local hospital. The hospital's internet was down, and they were unable to access patient records or communicate with other facilities. Eli knew he had to act fast.\n\n",
+          "tokens": 256,
+          "decode_tok_s": 59.37,
+          "draft_accepted": null,
+          "peak_memory_mib": 5245.2
+        },
+        {
+          "group": "open",
+          "id": "o3",
+          "text": "The lifecycle of a churn model involves several key stages, from data quality checks to online serving. Here\u2019s a detailed breakdown of each stage:\n\n### 1. **Data Collection**\n   - **Objective**: Gather data from various sources that can help predict customer churn.\n   - **Sources**: Customer transaction data, customer service interactions, demographic data, and behavioral data.\n   - **Challenges**: Ensuring data is comprehensive, accurate, and up-to-date.\n\n### 2. **Data Quality Checks**\n   - **Objective**: Ensure the data is clean, complete, and relevant.\n   - **Steps**:\n     - **Data Cleaning**: Remove or correct errors, missing values, and duplicates.\n     - **Data Validation**: Check for consistency and accuracy.\n     - **Feature Engineering**: Create new features or transform existing ones to improve model performance.\n   - **Tools**: Python libraries like Pandas, NumPy, and Scikit-learn.\n\n### 3. **Exploratory Data Analysis (EDA)**\n   - **Objective**: Understand the data and identify patterns, trends, and anomalies.\n   - **Steps**:\n     - **Descriptive Statistics**: Summarize key statistics.\n     - **Visualization**: Use plots and charts to visualize data distributions and relationships.\n",
+          "tokens": 256,
+          "decode_tok_s": 58.4,
+          "draft_accepted": null,
+          "peak_memory_mib": 5245.2
+        },
+        {
+          "group": "open",
+          "id": "o4",
+          "text": "The debate between lakehouse and data warehouse approaches to data management is a common one in the data engineering and analytics community. Both approaches have their strengths and are suited to different use cases. Here\u2019s a balanced view of the arguments for and against each:\n\n### Data Warehouse\n\n**Advantages:**\n1. **Mature Technology:** Data warehouses have been around for decades and are well-understood. They are widely adopted and have a large ecosystem of tools and best practices.\n2. **Predictable Performance:** Data warehouses are optimized for analytical workloads, providing predictable performance and scalability.\n3. **ACID Transactions:** They support ACID (Atomicity, Consistency, Isolation, Durability) transactions, which are crucial for transactional workloads.\n4. **Data Quality:** Data warehouses often include mechanisms for data cleaning, transformation, and validation, ensuring data quality.\n5. **Ease of Use:** Many BI tools and reporting platforms are optimized for data warehouses, making it easier to generate reports and dashboards.\n\n**Disadvantages:**\n1. **Cost:** Data warehouses can be expensive to set up and maintain, especially as the volume of data grows.\n2. **Complexity:** Setting up and managing a data warehouse can be complex, requiring significant expertise.\n3",
+          "tokens": 256,
+          "decode_tok_s": 59.15,
+          "draft_accepted": null,
+          "peak_memory_mib": 5245.2
+        }
+      ]
+    },
+    {
+      "draft_tokens": 3,
+      "summary": {
+        "structured": {
+          "decode_tok_s_mean": 103.24,
+          "tokens_from_draft": 0.722,
+          "speedup": 1.725,
+          "identical_text": 4,
+          "n": 4
+        },
+        "open": {
+          "decode_tok_s_mean": 72.64,
+          "tokens_from_draft": 0.609,
+          "speedup": 1.23,
+          "identical_text": 1,
+          "n": 4
+        },
+        "all": {
+          "decode_tok_s_mean": 87.94,
+          "tokens_from_draft": 0.66,
+          "speedup": 1.477,
+          "identical_text": 5,
+          "n": 8
+        }
+      },
+      "rows": [
+        {
+          "group": "structured",
+          "id": "s1",
+          "text": "Certainly! Below is a Python function `parse_iso_date` that takes a string in ISO format and returns a `datetime.date` object. I've also included five pytest test functions to ensure the function works as expected.\n\n```python\nfrom datetime import date\nfrom typing import Literal\n\ndef parse_iso_date(s: str) -> date:\n    \"\"\"\n    Parse a string in ISO format (YYYY-MM-DD) to a datetime.date object.\n\n    :param s: A string representing a date in ISO format.\n    :return: A datetime.date object corresponding to the input string.\n    \"\"\"\n    year, month, day = map(int, s.split('-'))\n    return date(year, month, day)\n\n# Test functions\nimport pytest\n\ndef test_parse_iso_date_valid():\n    assert parse_iso_date(\"2023-10-05\") == date(2023, 10, 5)\n\ndef test_parse_iso_date_invalid_format():\n    with pytest.raises(ValueError):\n        parse_iso_date(\"2023-10-55\")\n\ndef test_parse_iso_date_invalid_year():\n    with pytest.raises(ValueError):\n        parse_iso_date(\"2023-13-05\")\n\ndef test_parse_iso_date_invalid_month():\n   ",
+          "tokens": 256,
+          "decode_tok_s": 96.11,
+          "draft_accepted": 181,
+          "peak_memory_mib": 5245.2
+        },
+        {
+          "group": "structured",
+          "id": "s2",
+          "text": "Certainly! Below is the PostgreSQL DDL (Data Definition Language) for the `customers`, `orders`, and `order_items` tables, including primary keys, foreign keys, `NOT NULL` constraints, and an index on each foreign key.\n\n```sql\n-- Create the customers table\nCREATE TABLE customers (\n    customer_id SERIAL PRIMARY KEY,\n    first_name VARCHAR(50) NOT NULL,\n    last_name VARCHAR(50) NOT NULL,\n    email VARCHAR(100) NOT NULL UNIQUE,\n    phone VARCHAR(20) NOT NULL,\n    address VARCHAR(255),\n    city VARCHAR(100),\n    state VARCHAR(100),\n    zip_code VARCHAR(20),\n    country VARCHAR(100)\n);\n\n-- Create the orders table\nCREATE TABLE orders (\n    order_id SERIAL PRIMARY KEY,\n    customer_id INT NOT NULL,\n    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    order_total DECIMAL(10, 2) NOT NULL,\n    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE\n);\n\n-- Create the order_items table\nCREATE TABLE order_items (\n    item_id SERIAL PRIMARY KEY,\n    order_id INT NOT NULL,\n    product_name VARCHAR(255) NOT NULL,\n",
+          "tokens": 256,
+          "decode_tok_s": 97.52,
+          "draft_accepted": 182,
+          "peak_memory_mib": 5245.2
+        },
+        {
+          "group": "structured",
+          "id": "s3",
+          "text": "```yaml\nservice:\n  name: rag-api\n  replicas: 2\n  ports:\n  - 8000\n  - 9090\n  env:\n    TOP_K: 4\n    MIN_SCORE: 0.55\n    LOG_LEVEL: info\n  resources:\n    requests:\n      cpu: 250m\n      memory: 256Mi\n    limits:\n      cpu: 1\n      memory: 512Mi\n```",
+          "tokens": 106,
+          "decode_tok_s": 109.07,
+          "draft_accepted": 79,
+          "peak_memory_mib": 5250.0
+        },
+        {
+          "group": "structured",
+          "id": "s4",
+          "text": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty, forty-one, forty-two, forty-three, forty-four, forty-five, forty-six, forty-seven, forty-eight, forty-nine, fifty, fifty-one, fifty-two, fifty-three, fifty-four, fifty-five, fifty-six, fifty-seven, fifty-eight, fifty-nine, sixty, sixty-one, sixty-two, sixty-three, sixty-four, sixty-five, sixty-six, sixty-seven, sixty-eight, sixty-nine, seventy, seventy-one, seventy-two, seventy-three, seventy-four, seventy-five, seventy-six, seventy-seven, seventy-eight, seventy-nine, eighty",
+          "tokens": 214,
+          "decode_tok_s": 110.26,
+          "draft_accepted": 159,
+          "peak_memory_mib": 5250.0
+        },
+        {
+          "group": "open",
+          "id": "o1",
+          "text": "In the context of Large Language Models (LLMs) serving, particularly those using Transformer architectures, the trade-offs between PagedAttention and a contiguous KV (Key-Value) cache are significant. Let's break down each concept and the trade-offs involved.\n\n### PagedAttention\n\nPagedAttention is a technique designed to optimize the attention mechanism in Transformers, especially for long sequences. The standard attention mechanism requires storing the entire key and value matrices in memory, which can be prohibitive for long sequences. PagedAttention addresses this by dividing the sequence into smaller \"pages\" and processing them in batches.\n\n#### Key Features of PagedAttention:\n1. **Memory Efficiency**: By processing the sequence in smaller chunks, PagedAttention reduces the memory footprint required for the key and value matrices.\n2. **Parallel Processing**: It allows for parallel processing of different parts of the sequence, which can be beneficial for performance.\n3. **Scalability**: It is particularly useful for very long sequences, where the memory requirements of the standard attention mechanism would be impractical.\n\n#### Trade-offs:\n1. **Increased Computational Overhead**: Processing the sequence in smaller chunks can introduce additional computational overhead due to the need to manage and process these chunks.\n2. **Complexity**: Implementing and managing",
+          "tokens": 256,
+          "decode_tok_s": 74.36,
+          "draft_accepted": 159,
+          "peak_memory_mib": 5250.0
+        },
+        {
+          "group": "open",
+          "id": "o2",
+          "text": "In the quiet, unassuming town of Millbrook, nestled between rolling hills and whispering woods, lived a network engineer named Eli. Eli was a man of few words, with a penchant for the quiet moments that most people found boring. His days were spent in the cool, dimly lit server room of Millbrook Telecom, where he maintained the backbone of the town's internet infrastructure. But at 3 a.m., Eli was a different man. He was a night owl, a troubleshooter, and a guardian of the digital realm.\n\nOne chilly winter night, as the moon hung low and the stars twinkled like distant fires, Eli found himself at his desk, sipping on a cup of cold coffee. The server room was a sanctuary, a place where the world outside seemed to fade away. The hum of the servers was a soothing lullaby, and the glow of the monitors cast a warm light over the rows of humming machines.\n\nEli's task that night was to monitor the network for any unusual activity. He had just finished his rounds when his eyes were drawn to a single, uncharacteristically quiet cell. It was a small, unremarkable cell, one of the many that made up the vast network of Millbrook Telecom. But something",
+          "tokens": 256,
+          "decode_tok_s": 62.6,
+          "draft_accepted": 141,
+          "peak_memory_mib": 5250.0
+        },
+        {
+          "group": "open",
+          "id": "o3",
+          "text": "The lifecycle of a churn model involves several key stages, from data quality checks to online serving. Here\u2019s a detailed breakdown of each stage:\n\n### 1. **Data Collection**\n   - **Objective**: Gather data from various sources that can help predict customer churn.\n   - **Sources**: Customer transaction data, customer service interactions, demographic data, and behavioral data.\n   - **Challenges**: Ensuring data is comprehensive, accurate, and up-to-date.\n\n### 2. **Data Quality Checks**\n   - **Objective**: Ensure the data is clean, complete, and relevant.\n   - **Steps**:\n     - **Data Cleaning**: Remove or correct errors, missing values, and inconsistencies.\n     - **Data Validation**: Verify that the data meets the required standards and formats.\n     - **Data Integration**: Combine data from different sources to create a unified dataset.\n   - **Tools**: Python libraries like Pandas, NumPy, and data validation frameworks like PyData.\n\n### 3. **Exploratory Data Analysis (EDA)**\n   - **Objective**: Understand the data and identify patterns, trends, and anomalies.\n   - **Steps**:\n     - **Descriptive Statistics**: Calculate mean, median, mode, and other statistical measures.\n     - **Data",
+          "tokens": 256,
+          "decode_tok_s": 82.89,
+          "draft_accepted": 169,
+          "peak_memory_mib": 5250.0
+        },
+        {
+          "group": "open",
+          "id": "o4",
+          "text": "The debate between lakehouse and data warehouse approaches to data management is a common one in the data engineering and analytics community. Both approaches have their strengths and are suited to different use cases. Here\u2019s a balanced view of the arguments for and against each:\n\n### Data Warehouse\n\n**Advantages:**\n1. **Mature Technology:** Data warehouses have been around for decades and are well-understood. They are widely adopted and have a large ecosystem of tools and best practices.\n2. **Predictable Performance:** Data warehouses are optimized for analytical workloads, providing predictable performance and scalability.\n3. **ACID Transactions:** They support ACID (Atomicity, Consistency, Isolation, Durability) transactions, which are crucial for transactional workloads.\n4. **Data Quality:** Data warehouses often include mechanisms for data cleaning, transformation, and validation, ensuring data quality.\n5. **Ease of Use:** Many BI tools and reporting platforms are optimized for data warehouses, making it easier to generate reports and dashboards.\n\n**Disadvantages:**\n1. **Cost:** Data warehouses can be expensive to set up and maintain, especially as the volume of data grows.\n2. **Complexity:** Setting up and managing a data warehouse can be complex, requiring significant expertise.\n3",
+          "tokens": 256,
+          "decode_tok_s": 70.72,
+          "draft_accepted": 155,
+          "peak_memory_mib": 5250.0
+        }
+      ]
+    },
+    {
+      "draft_tokens": 8,
+      "summary": {
+        "structured": {
+          "decode_tok_s_mean": 86.28,
+          "tokens_from_draft": 0.855,
+          "speedup": 1.441,
+          "identical_text": 4,
+          "n": 4
+        },
+        "open": {
+          "decode_tok_s_mean": 39.84,
+          "tokens_from_draft": 0.691,
+          "speedup": 0.675,
+          "identical_text": 4,
+          "n": 4
+        },
+        "all": {
+          "decode_tok_s_mean": 63.05,
+          "tokens_from_draft": 0.765,
+          "speedup": 1.058,
+          "identical_text": 8,
+          "n": 8
+        }
+      },
+      "rows": [
+        {
+          "group": "structured",
+          "id": "s1",
+          "text": "Certainly! Below is a Python function `parse_iso_date` that takes a string in ISO format and returns a `datetime.date` object. I've also included five pytest test functions to ensure the function works as expected.\n\n```python\nfrom datetime import date\nfrom typing import Literal\n\ndef parse_iso_date(s: str) -> date:\n    \"\"\"\n    Parse a string in ISO format (YYYY-MM-DD) to a datetime.date object.\n\n    :param s: A string representing a date in ISO format.\n    :return: A datetime.date object corresponding to the input string.\n    \"\"\"\n    year, month, day = map(int, s.split('-'))\n    return date(year, month, day)\n\n# Test functions\nimport pytest\n\ndef test_parse_iso_date_valid():\n    assert parse_iso_date(\"2023-10-05\") == date(2023, 10, 5)\n\ndef test_parse_iso_date_invalid_format():\n    with pytest.raises(ValueError):\n        parse_iso_date(\"2023-10-55\")\n\ndef test_parse_iso_date_invalid_year():\n    with pytest.raises(ValueError):\n        parse_iso_date(\"2023-13-05\")\n\ndef test_parse_iso_date_invalid_month():\n   ",
+          "tokens": 256,
+          "decode_tok_s": 70.52,
+          "draft_accepted": 214,
+          "peak_memory_mib": 5250.0
+        },
+        {
+          "group": "structured",
+          "id": "s2",
+          "text": "Certainly! Below is the PostgreSQL DDL (Data Definition Language) for the `customers`, `orders`, and `order_items` tables, including primary keys, foreign keys, `NOT NULL` constraints, and an index on each foreign key.\n\n```sql\n-- Create the customers table\nCREATE TABLE customers (\n    customer_id SERIAL PRIMARY KEY,\n    first_name VARCHAR(50) NOT NULL,\n    last_name VARCHAR(50) NOT NULL,\n    email VARCHAR(100) NOT NULL UNIQUE,\n    phone VARCHAR(20) NOT NULL,\n    address VARCHAR(255),\n    city VARCHAR(100),\n    state VARCHAR(100),\n    zip_code VARCHAR(20),\n    country VARCHAR(100)\n);\n\n-- Create the orders table\nCREATE TABLE orders (\n    order_id SERIAL PRIMARY KEY,\n    customer_id INT NOT NULL,\n    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    order_total DECIMAL(10, 2) NOT NULL,\n    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE\n);\n\n-- Create the order_items table\nCREATE TABLE order_items (\n    item_id SERIAL PRIMARY KEY,\n    order_id INT NOT NULL,\n    product_name VARCHAR(255) NOT NULL,\n",
+          "tokens": 256,
+          "decode_tok_s": 77.66,
+          "draft_accepted": 217,
+          "peak_memory_mib": 5250.0
+        },
+        {
+          "group": "structured",
+          "id": "s3",
+          "text": "```yaml\nservice:\n  name: rag-api\n  replicas: 2\n  ports:\n  - 8000\n  - 9090\n  env:\n    TOP_K: 4\n    MIN_SCORE: 0.55\n    LOG_LEVEL: info\n  resources:\n    requests:\n      cpu: 250m\n      memory: 256Mi\n    limits:\n      cpu: 1\n      memory: 512Mi\n```",
+          "tokens": 106,
+          "decode_tok_s": 95.9,
+          "draft_accepted": 92,
+          "peak_memory_mib": 5250.9
+        },
+        {
+          "group": "structured",
+          "id": "s4",
+          "text": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty, forty-one, forty-two, forty-three, forty-four, forty-five, forty-six, forty-seven, forty-eight, forty-nine, fifty, fifty-one, fifty-two, fifty-three, fifty-four, fifty-five, fifty-six, fifty-seven, fifty-eight, fifty-nine, sixty, sixty-one, sixty-two, sixty-three, sixty-four, sixty-five, sixty-six, sixty-seven, sixty-eight, sixty-nine, seventy, seventy-one, seventy-two, seventy-three, seventy-four, seventy-five, seventy-six, seventy-seven, seventy-eight, seventy-nine, eighty",
+          "tokens": 214,
+          "decode_tok_s": 101.02,
+          "draft_accepted": 188,
+          "peak_memory_mib": 5250.9
+        },
+        {
+          "group": "open",
+          "id": "o1",
+          "text": "In the context of Large Language Models (LLMs) serving, particularly those using Transformer architectures, the trade-offs between PagedAttention and a contiguous KV (Key-Value) cache are significant. Let's break down each concept and the trade-offs involved.\n\n### PagedAttention\n\nPagedAttention is a technique designed to optimize the attention mechanism in Transformers, especially for long sequences. The standard attention mechanism requires storing the entire key and value matrices in memory, which can be prohibitive for long sequences. PagedAttention addresses this by dividing the sequence into smaller \"pages\" and processing them in a batched manner.\n\n#### Key Features of PagedAttention:\n1. **Memory Efficiency**: By processing smaller chunks of the sequence at a time, PagedAttention reduces the memory footprint required for the attention mechanism.\n2. **Parallel Processing**: It allows for parallel processing of attention scores, which can be beneficial for performance.\n3. **Scalability**: It is particularly useful for very long sequences, where the memory requirements of the standard attention mechanism would be impractical.\n\n#### Trade-offs:\n1. **Increased Computational Overhead**: Processing the sequence in smaller pages introduces additional computational overhead due to the need to manage and process these pages.\n2. **Complexity**: The implementation of P",
+          "tokens": 256,
+          "decode_tok_s": 38.54,
+          "draft_accepted": 178,
+          "peak_memory_mib": 5250.9
+        },
+        {
+          "group": "open",
+          "id": "o2",
+          "text": "In the quiet, unassuming town of Millbrook, nestled between rolling hills and whispering woods, lived a network engineer named Eli. Eli was a man of few words, with a penchant for the quiet moments that most people found boring. His days were spent in the cool, dimly lit server room of Millbrook Telecom, where he maintained the backbone of the town's internet infrastructure. But at 3 a.m., Eli was a different man. He was a night owl, a troubleshooter, and a guardian of the digital realm.\n\nOne chilly winter night, as the moon hung low and the stars twinkled like distant fires, Eli found himself at his desk, sipping on a cup of cold coffee. The server room was a sanctuary, a place where the world outside seemed to fade away. The hum of the servers was a soothing lullaby, and the glow of the monitors cast a warm light over the rows of humming machines.\n\nAt 3:00 a.m., Eli's phone rang. It was a call from the town's mayor, who was frantically trying to reach the local hospital. The hospital's internet was down, and they were unable to access patient records or communicate with other facilities. Eli knew he had to act fast.\n\n",
+          "tokens": 256,
+          "decode_tok_s": 30.29,
+          "draft_accepted": 156,
+          "peak_memory_mib": 5250.9
+        },
+        {
+          "group": "open",
+          "id": "o3",
+          "text": "The lifecycle of a churn model involves several key stages, from data quality checks to online serving. Here\u2019s a detailed breakdown of each stage:\n\n### 1. **Data Collection**\n   - **Objective**: Gather data from various sources that can help predict customer churn.\n   - **Sources**: Customer transaction data, customer service interactions, demographic data, and behavioral data.\n   - **Challenges**: Ensuring data is comprehensive, accurate, and up-to-date.\n\n### 2. **Data Quality Checks**\n   - **Objective**: Ensure the data is clean, complete, and relevant.\n   - **Steps**:\n     - **Data Cleaning**: Remove or correct errors, missing values, and duplicates.\n     - **Data Validation**: Check for consistency and accuracy.\n     - **Feature Engineering**: Create new features or transform existing ones to improve model performance.\n   - **Tools**: Python libraries like Pandas, NumPy, and Scikit-learn.\n\n### 3. **Exploratory Data Analysis (EDA)**\n   - **Objective**: Understand the data and identify patterns, trends, and anomalies.\n   - **Steps**:\n     - **Descriptive Statistics**: Summarize key statistics.\n     - **Visualization**: Use plots and charts to visualize data distributions and relationships.\n",
+          "tokens": 256,
+          "decode_tok_s": 50.38,
+          "draft_accepted": 195,
+          "peak_memory_mib": 5250.9
+        },
+        {
+          "group": "open",
+          "id": "o4",
+          "text": "The debate between lakehouse and data warehouse approaches to data management is a common one in the data engineering and analytics community. Both approaches have their strengths and are suited to different use cases. Here\u2019s a balanced view of the arguments for and against each:\n\n### Data Warehouse\n\n**Advantages:**\n1. **Mature Technology:** Data warehouses have been around for decades and are well-understood. They are widely adopted and have a large ecosystem of tools and best practices.\n2. **Predictable Performance:** Data warehouses are optimized for analytical workloads, providing predictable performance and scalability.\n3. **ACID Transactions:** They support ACID (Atomicity, Consistency, Isolation, Durability) transactions, which are crucial for transactional workloads.\n4. **Data Quality:** Data warehouses often include mechanisms for data cleaning, transformation, and validation, ensuring data quality.\n5. **Ease of Use:** Many BI tools and reporting platforms are optimized for data warehouses, making it easier to generate reports and dashboards.\n\n**Disadvantages:**\n1. **Cost:** Data warehouses can be expensive to set up and maintain, especially as the volume of data grows.\n2. **Complexity:** Setting up and managing a data warehouse can be complex, requiring significant expertise.\n3",
+          "tokens": 256,
+          "decode_tok_s": 40.13,
+          "draft_accepted": 179,
+          "peak_memory_mib": 5250.9
+        }
+      ]
+    },
+    {
+      "draft_tokens": 16,
+      "summary": {
+        "structured": {
+          "decode_tok_s_mean": 89.9,
+          "tokens_from_draft": 0.9,
+          "speedup": 1.502,
+          "identical_text": 4,
+          "n": 4
+        },
+        "open": {
+          "decode_tok_s_mean": 28.61,
+          "tokens_from_draft": 0.705,
+          "speedup": 0.485,
+          "identical_text": 3,
+          "n": 4
+        },
+        "all": {
+          "decode_tok_s_mean": 59.25,
+          "tokens_from_draft": 0.793,
+          "speedup": 0.993,
+          "identical_text": 7,
+          "n": 8
+        }
+      },
+      "rows": [
+        {
+          "group": "structured",
+          "id": "s1",
+          "text": "Certainly! Below is a Python function `parse_iso_date` that takes a string in ISO format and returns a `datetime.date` object. I've also included five pytest test functions to ensure the function works as expected.\n\n```python\nfrom datetime import date\nfrom typing import Literal\n\ndef parse_iso_date(s: str) -> date:\n    \"\"\"\n    Parse a string in ISO format (YYYY-MM-DD) to a datetime.date object.\n\n    :param s: A string representing a date in ISO format.\n    :return: A datetime.date object corresponding to the input string.\n    \"\"\"\n    year, month, day = map(int, s.split('-'))\n    return date(year, month, day)\n\n# Test functions\nimport pytest\n\ndef test_parse_iso_date_valid():\n    assert parse_iso_date(\"2023-10-05\") == date(2023, 10, 5)\n\ndef test_parse_iso_date_invalid_format():\n    with pytest.raises(ValueError):\n        parse_iso_date(\"2023-10-55\")\n\ndef test_parse_iso_date_invalid_year():\n    with pytest.raises(ValueError):\n        parse_iso_date(\"2023-13-05\")\n\ndef test_parse_iso_date_invalid_month():\n   ",
+          "tokens": 256,
+          "decode_tok_s": 64.82,
+          "draft_accepted": 225,
+          "peak_memory_mib": 5250.9
+        },
+        {
+          "group": "structured",
+          "id": "s2",
+          "text": "Certainly! Below is the PostgreSQL DDL (Data Definition Language) for the `customers`, `orders`, and `order_items` tables, including primary keys, foreign keys, `NOT NULL` constraints, and an index on each foreign key.\n\n```sql\n-- Create the customers table\nCREATE TABLE customers (\n    customer_id SERIAL PRIMARY KEY,\n    first_name VARCHAR(50) NOT NULL,\n    last_name VARCHAR(50) NOT NULL,\n    email VARCHAR(100) NOT NULL UNIQUE,\n    phone VARCHAR(20) NOT NULL,\n    address VARCHAR(255),\n    city VARCHAR(100),\n    state VARCHAR(100),\n    zip_code VARCHAR(20),\n    country VARCHAR(100)\n);\n\n-- Create the orders table\nCREATE TABLE orders (\n    order_id SERIAL PRIMARY KEY,\n    customer_id INT NOT NULL,\n    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    order_total DECIMAL(10, 2) NOT NULL,\n    FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE CASCADE\n);\n\n-- Create the order_items table\nCREATE TABLE order_items (\n    item_id SERIAL PRIMARY KEY,\n    order_id INT NOT NULL,\n    product_name VARCHAR(255) NOT NULL,\n",
+          "tokens": 256,
+          "decode_tok_s": 70.33,
+          "draft_accepted": 227,
+          "peak_memory_mib": 5250.9
+        },
+        {
+          "group": "structured",
+          "id": "s3",
+          "text": "```yaml\nservice:\n  name: rag-api\n  replicas: 2\n  ports:\n  - 8000\n  - 9090\n  env:\n    TOP_K: 4\n    MIN_SCORE: 0.55\n    LOG_LEVEL: info\n  resources:\n    requests:\n      cpu: 250m\n      memory: 256Mi\n    limits:\n      cpu: 1\n      memory: 512Mi\n```",
+          "tokens": 106,
+          "decode_tok_s": 104.19,
+          "draft_accepted": 98,
+          "peak_memory_mib": 5251.2
+        },
+        {
+          "group": "structured",
+          "id": "s4",
+          "text": "one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty, twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty, thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty, forty-one, forty-two, forty-three, forty-four, forty-five, forty-six, forty-seven, forty-eight, forty-nine, fifty, fifty-one, fifty-two, fifty-three, fifty-four, fifty-five, fifty-six, fifty-seven, fifty-eight, fifty-nine, sixty, sixty-one, sixty-two, sixty-three, sixty-four, sixty-five, sixty-six, sixty-seven, sixty-eight, sixty-nine, seventy, seventy-one, seventy-two, seventy-three, seventy-four, seventy-five, seventy-six, seventy-seven, seventy-eight, seventy-nine, eighty",
+          "tokens": 214,
+          "decode_tok_s": 120.27,
+          "draft_accepted": 199,
+          "peak_memory_mib": 5251.2
+        },
+        {
+          "group": "open",
+          "id": "o1",
+          "text": "In the context of Large Language Models (LLMs) serving, particularly those using Transformer architectures, the trade-offs between PagedAttention and a contiguous KV (Key-Value) cache are significant. Let's break down each concept and the trade-offs involved.\n\n### PagedAttention\n\nPagedAttention is a technique designed to optimize the attention mechanism in Transformers, especially for long sequences. The standard attention mechanism requires storing the entire key and value matrices in memory, which can be prohibitive for long sequences. PagedAttention addresses this by dividing the sequence into smaller \"pages\" and processing them in a batched manner.\n\n#### Key Features of PagedAttention:\n1. **Memory Efficiency**: By processing smaller chunks of the sequence at a time, PagedAttention reduces the memory footprint required for the attention mechanism.\n2. **Parallel Processing**: It allows for parallel processing of attention scores, which can be beneficial for performance.\n3. **Scalability**: It is particularly useful for very long sequences, where the memory requirements of the standard attention mechanism would be impractical.\n\n#### Trade-offs:\n1. **Increased Computational Overhead**: Processing the sequence in smaller pages introduces additional computational overhead due to the need to manage and process these pages.\n2. **Complexity**: The implementation of P",
+          "tokens": 256,
+          "decode_tok_s": 27.08,
+          "draft_accepted": 181,
+          "peak_memory_mib": 5251.2
+        },
+        {
+          "group": "open",
+          "id": "o2",
+          "text": "In the quiet, unassuming town of Millbrook, nestled between rolling hills and whispering woods, lived a network engineer named Eli. Eli was a man of few words, with a penchant for the quiet moments that most people found boring. His days were spent in the cool, dimly lit server room of Millbrook Telecom, where he maintained the backbone of the town's internet infrastructure. But at 3 a.m., Eli was a different man. He was a night owl, a troubleshooter, and a guardian of the digital realm.\n\nOne chilly winter night, as the moon hung low and the stars twinkled like distant fires, Eli found himself at his desk, sipping on a cup of cold coffee. The server room was a sanctuary, a place where the world outside seemed to fade away. The hum of the servers was a soothing lullaby, and the glow of the monitors cast a warm light over the rows of humming machines.\n\nEli's task that night was to monitor the network for any unusual activity. He had just finished his rounds when his eyes were drawn to a single, uncharacteristically quiet cell. It was a small, unremarkable cell, one of the many that made up the vast network of Millbrook Telecom. But something",
+          "tokens": 256,
+          "decode_tok_s": 20.19,
+          "draft_accepted": 154,
+          "peak_memory_mib": 5251.2
+        },
+        {
+          "group": "open",
+          "id": "o3",
+          "text": "The lifecycle of a churn model involves several key stages, from data quality checks to online serving. Here\u2019s a detailed breakdown of each stage:\n\n### 1. **Data Collection**\n   - **Objective**: Gather data from various sources that can help predict customer churn.\n   - **Sources**: Customer transaction data, customer service interactions, demographic data, and behavioral data.\n   - **Challenges**: Ensuring data is comprehensive, accurate, and up-to-date.\n\n### 2. **Data Quality Checks**\n   - **Objective**: Ensure the data is clean, complete, and relevant.\n   - **Steps**:\n     - **Data Cleaning**: Remove or correct errors, missing values, and duplicates.\n     - **Data Validation**: Check for consistency and accuracy.\n     - **Feature Engineering**: Create new features or transform existing ones to improve model performance.\n   - **Tools**: Python libraries like Pandas, NumPy, and Scikit-learn.\n\n### 3. **Exploratory Data Analysis (EDA)**\n   - **Objective**: Understand the data and identify patterns, trends, and anomalies.\n   - **Steps**:\n     - **Descriptive Statistics**: Summarize key statistics.\n     - **Visualization**: Use plots and charts to visualize data distributions and relationships.\n",
+          "tokens": 256,
+          "decode_tok_s": 38.28,
+          "draft_accepted": 203,
+          "peak_memory_mib": 5251.2
+        },
+        {
+          "group": "open",
+          "id": "o4",
+          "text": "The debate between lakehouse and data warehouse approaches to data management is a common one in the data engineering and analytics community. Both approaches have their strengths and are suited to different use cases. Here\u2019s a balanced view of the arguments for and against each:\n\n### Data Warehouse\n\n**Advantages:**\n1. **Mature Technology:** Data warehouses have been around for decades and are well-understood. They are widely adopted and have a large ecosystem of tools and best practices.\n2. **Predictable Performance:** Data warehouses are optimized for analytical workloads, providing predictable performance and scalability.\n3. **ACID Transactions:** They support ACID (Atomicity, Consistency, Isolation, Durability) transactions, which are crucial for transactional workloads.\n4. **Data Quality:** Data warehouses often include mechanisms for data cleaning, transformation, and validation, ensuring data quality.\n5. **Ease of Use:** Many BI tools and reporting platforms are optimized for data warehouses, making it easier to generate reports and dashboards.\n\n**Disadvantages:**\n1. **Cost:** Data warehouses can be expensive to set up and maintain, especially as the volume of data grows.\n2. **Complexity:** Setting up and managing a data warehouse can be complex, requiring significant expertise.\n3",
+          "tokens": 256,
+          "decode_tok_s": 28.88,
+          "draft_accepted": 184,
+          "peak_memory_mib": 5251.2
+        }
+      ]
+    }
+  ]
+}
