@@ -1,0 +1,56 @@
+{
+  "model": "Qwen2.5-1.5B-Instruct",
+  "gguf": "qwen2.5-1.5b-instruct-q8_0.gguf",
+  "mlx": "Qwen2.5-1.5B-Instruct-8bit",
+  "generated_tokens": 128,
+  "rows": [
+    {
+      "engine": "llama.cpp",
+      "kv": "f16",
+      "prompt_tokens": 512,
+      "prefill_s": 0.219,
+      "prefill_tok_s": 2342.4,
+      "decode_tok_s": 121.5,
+      "generated": 128,
+      "peak_footprint_mib": 2235.4,
+      "engine_kv_mib": 21.0,
+      "engine_model_mib": 1801.1,
+      "engine_compute_mib": 78.0
+    },
+    {
+      "engine": "llama.cpp",
+      "kv": "f16",
+      "prompt_tokens": 4096,
+      "prefill_s": 1.963,
+      "prefill_tok_s": 2086.3,
+      "decode_tok_s": 112.8,
+      "generated": 128,
+      "peak_footprint_mib": 2340.5,
+      "engine_kv_mib": 119.0,
+      "engine_model_mib": 1801.1,
+      "engine_compute_mib": 85.0
+    },
+    {
+      "engine": "mlx",
+      "kv": "f16",
+      "prompt_tokens": 512,
+      "prefill_s": 0.229,
+      "prefill_tok_s": 2237.7,
+      "decode_tok_s": 127.9,
+      "generated": 128,
+      "engine_peak_mib": 2221.1,
+      "peak_footprint_mib": 2550.6
+    },
+    {
+      "engine": "mlx",
+      "kv": "f16",
+      "prompt_tokens": 4096,
+      "prefill_s": 1.819,
+      "prefill_tok_s": 2252.1,
+      "decode_tok_s": 119.0,
+      "generated": 128,
+      "engine_peak_mib": 2385.4,
+      "peak_footprint_mib": 2749.5
+    }
+  ]
+}
