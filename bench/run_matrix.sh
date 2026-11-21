@@ -42,15 +42,15 @@ concurrency() {
   done
 }
 
-prefill() {
-  start_metal q4_k_m
-  for n in 256 1024 4096 8192; do
+prefill() {  # 32k context over 4 slots = 8k per sequence
+  start_metal q4_k_m -c 32768
+  for n in 256 1024 4096 6144; do
     $PY bench/loadgen.py --url http://127.0.0.1:58080 --label "metal-prefill-$n" --levels 1 --requests-per-level 3 \
       --max-tokens 16 --prompt-tokens $n --cache-prompt false --meta '{"backend":"metal","quant":"q4_k_m"}' \
       --out "$RAW/prefill_metal_$n.json"
   done
   stop_metal
-  start_cpu q4_k_m
+  start_cpu q4_k_m -c 32768
   for n in 256 1024 4096; do
     $PY bench/loadgen.py --url http://127.0.0.1:58081 --label "cpu-prefill-$n" --levels 1 --requests-per-level 3 \
       --max-tokens 16 --prompt-tokens $n --cache-prompt false --meta '{"backend":"cpu","quant":"q4_k_m"}' \

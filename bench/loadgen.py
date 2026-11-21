@@ -90,6 +90,8 @@ async def level(url, model, conc, n, max_tokens, prompt_tokens, ignore_eos, cach
         res = await asyncio.gather(*(task(i) for i in range(n)), return_exceptions=True)
         wall = time.perf_counter() - t0
     ok = [r for r in res if isinstance(r, dict)]
+    if not ok:
+        raise SystemExit(f"all {n} requests failed at concurrency {conc}: {res[0]!r}")
     toks = sum(r["completion_tokens"] for r in ok)
     return {
         "concurrency": conc, "requests": n, "errors": n - len(ok), "wall_s": round(wall, 2),
