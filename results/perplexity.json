@@ -1,0 +1,18 @@
+{
+  "text": "bench/text/filler.txt",
+  "ctx": 512,
+  "rows": [
+    {
+      "quant": "q4_k_m",
+      "file_mib": 1065.6,
+      "ppl": 24.6864,
+      "ppl_err": 1.08765
+    },
+    {
+      "quant": "q8_0",
+      "file_mib": 1806.8,
+      "ppl": 23.6264,
+      "ppl_err": 1.0356
+    }
+  ]
+}
