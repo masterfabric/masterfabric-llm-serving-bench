@@ -1,0 +1,20 @@
+{
+  "text": "bench/text/filler.txt",
+  "ctx": 512,
+  "rows": [
+    {
+      "weights": "Qwen2.5-1.5B-Instruct-4bit",
+      "file_mib": 828.4,
+      "chunks": 19,
+      "ppl": 27.2585,
+      "ppl_err": 1.1925
+    },
+    {
+      "weights": "Qwen2.5-1.5B-Instruct-8bit",
+      "file_mib": 1564.4,
+      "chunks": 19,
+      "ppl": 23.2082,
+      "ppl_err": 1.0076
+    }
+  ]
+}
