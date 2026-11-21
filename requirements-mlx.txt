@@ -1,0 +1,4 @@
+# Apple Silicon only: MLX engine for the MLX vs llama.cpp experiments (bench/ctx_curve.py, bench/mlx_*.py).
+# mlx, mlx-metal, mlx-lm: MIT. transformers, huggingface_hub, tokenizers, safetensors: Apache-2.0.
+mlx==0.32.4
+mlx-lm==0.32.2
