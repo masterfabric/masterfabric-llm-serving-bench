@@ -20,4 +20,9 @@ for repo in ["mlx-community/Qwen2.5-1.5B-Instruct-4bit", "mlx-community/Qwen2.5-
     p = snapshot_download(repo, local_dir=f"{sys.argv[1]}/{repo.split('/')[1]}")
     print("have", p)
 PY
-( cd "$M" && shasum -a 256 qwen2.5-7b-instruct-q4_k_m.gguf qwen2.5-0.5b-instruct-q8_0.gguf )
+# pinned: the Hugging Face LFS sha256 of the files the results were measured with
+( cd "$M" && shasum -a 256 -c - <<'SUMS'
+65b8fcd92af6b4fefa935c625d1ac27ea29dcb6ee14589c55a8f115ceaaa1423  qwen2.5-7b-instruct-q4_k_m.gguf
+ca59ca7f13d0e15a8cfa77bd17e65d24f6844b554a7b6c12e07a5f89ff76844e  qwen2.5-0.5b-instruct-q8_0.gguf
+SUMS
+)
