@@ -30,8 +30,8 @@ corresponding source.
 Third-party components
 ----------------------
 - llama.cpp (llama-server, llama-perplexity, Homebrew build and ghcr.io container image): MIT License.
-- Qwen2.5-1.5B-Instruct GGUF weights (Q4_K_M, Q8_0): Apache License 2.0, downloaded at run time, not redistributed.
-- httpx (BSD-3-Clause), NumPy and pandas (BSD-3-Clause), matplotlib (Matplotlib License), Pillow (MIT-CMU).
+- Qwen2.5-1.5B-Instruct GGUF weights (Q4_K_M, Q8_0, F16): Apache License 2.0, downloaded at run time, not redistributed.
+- httpx (BSD-3-Clause), NumPy (BSD-3-Clause), matplotlib (Matplotlib License), Pillow (MIT-CMU).
 - Diagrams and the hero image are rendered with the Inter and JetBrains Mono fonts (SIL OFL 1.1); the font files are not redistributed here.
 - The perplexity text consists of documentation from other MasterFabric repositories (AGPL-3.0).
 - All container images, Python packages and other dependencies keep their own
