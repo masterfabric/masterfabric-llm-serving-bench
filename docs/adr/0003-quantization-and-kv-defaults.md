@@ -15,7 +15,7 @@ The on-prem stack (masterfabric-onprem-llm-stack) shipped with Q4_K_M weights, a
 | Q4_K_M or Q8_0 weights? | perplexity, 38 KB lab docs, ctx 512 | 24.69 ± 1.09 vs 23.63 ± 1.04 (F16: 23.62 ± 1.04), within the error bars; file 1,066 vs 1,807 MiB (F16 3,396) |
 | | Metal throughput, 4 concurrent | 381 vs 358 tok/s |
 | | CPU container throughput, 4 concurrent | 184 vs 328 tok/s (reproduced: 181 vs 335) |
-| f16 or q8_0 KV cache? | 32k context, 4 × ~5.5k-token prompts, Metal | KV buffer 896 vs 476 MiB (computed), server RSS 2,747 vs 2,043 MiB, 38.2 vs 37.9 tok/s |
+| f16 or q8_0 KV cache? | 32k context, 4 × ~5.5k-token prompts, Metal | KV buffer 896 vs 476 MiB (computed), server RSS 2,746 vs 2,042 MiB, 38.2 vs 37.9 tok/s |
 | How many concurrent requests per replica? | 1-8 concurrent, 4 slots | throughput peaks at 4; at 8, TTFT p50 jumps from ~14 ms to ~1.5 s (queueing) |
 | Prompt cache on? | 4k-token prompt sent twice | 1.89 s TTFT cold, 13 ms on the repeat with cache; no cost on the cold request |
 

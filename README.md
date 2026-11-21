@@ -35,7 +35,7 @@ Every number in this README comes from a file in [`results/`](results/), written
 - **Q4_K_M costs little quality.** Perplexity 24.69 ± 1.09 vs 23.63 ± 1.04 for Q8_0 (F16: 23.62 ± 1.04, so Q8_0 is indistinguishable from F16),
   for a 41% smaller file.
 - **A q8_0 KV cache halves KV memory at the same speed.** At 32k context: 896 → 476 MiB KV buffer
-  (computed), server RSS 2,747 → 2,043 MiB (measured), 38.2 vs 37.9 tok/s.
+  (computed), server RSS 2,746 → 2,042 MiB (measured), 38.2 vs 37.9 tok/s.
 - **The prompt cache turns a 1.89 s prefill into 13 ms** for a repeated 4k-token prompt, and costs
   nothing on the cold request (1.888 s vs 1.891 s).
 
@@ -105,8 +105,8 @@ CPU-only node adds ~14 s before the first token. File: `results/prefill.json`.
 
 | KV cache type (32k ctx, flash attention) | KV buffer (computed) | Server RSS (measured) | Output tok/s | TTFT p50 | ITL p50 |
 |---|---|---|---|---|---|
-| f16 | 896 MiB | 2,747 MiB | 38.2 | 5.55 s | 13.7 ms |
-| q8_0 | 476 MiB | 2,043 MiB | 37.9 | 4.54 s | 13.6 ms |
+| f16 | 896 MiB | 2,746 MiB | 38.2 | 5.55 s | 13.7 ms |
+| q8_0 | 476 MiB | 2,042 MiB | 37.9 | 4.54 s | 13.6 ms |
 
 The KV buffer is computed from the model shape: 28 layers × 2 KV heads × 128 dims × (K + V) =
 14,336 values per token, × 32,768 tokens × 2 bytes (f16) or 34/32 bytes (q8_0). The quiet server
