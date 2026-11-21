@@ -1,0 +1,26 @@
+{
+  "rows": [
+    {
+      "kv_type": "f16",
+      "ctx": 32768,
+      "kv_buffer_mib": 896.0,
+      "kv_buffer_note": "computed from the model shape, not read from the server",
+      "server_rss_mib": 2746.5,
+      "output_tok_s": 38.17,
+      "ttft_p50_s": 5.549,
+      "itl_ms_p50": 13.66,
+      "prompt_tokens_mean": 5482.4
+    },
+    {
+      "kv_type": "q8_0",
+      "ctx": 32768,
+      "kv_buffer_mib": 476.0,
+      "kv_buffer_note": "computed from the model shape, not read from the server",
+      "server_rss_mib": 2042.5,
+      "output_tok_s": 37.91,
+      "ttft_p50_s": 4.542,
+      "itl_ms_p50": 13.57,
+      "prompt_tokens_mean": 5482.4
+    }
+  ]
+}
