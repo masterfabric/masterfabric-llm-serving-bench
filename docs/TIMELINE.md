@@ -89,3 +89,50 @@ model, and measure memory and speed from 512 to 31k tokens of context. Times are
   concurrent requests 3 of 96 MLX requests failed on the client side.
 - The user's own MLX server on port 11234 was not used; the benchmark started and stopped its own on
   58082.
+
+
+## Addition: why draft output differs, and the MacBook Air M5
+
+Goal: find the cause of the 5-of-8 greedy output mismatches with a draft model in llama.cpp, and
+measure the MacBook Air M5 if it is reachable. On 2026-11-23 the M4 Pro was offline and the Air was
+reachable, so the measurements ran on the Air (on battery) and the commits were prepared from those
+results. Times are Europe/Istanbul (UTC+3); the run times on the Air were 09:50-10:27.
+
+| # | Commit | Time | Change |
+|---|---|---|---|
+| 1 | `38b9cae` | 2026-11-23 10:29 | bench: spec_mismatch.py finds where draft output diverges and how close the target's top two tokens were |
+| 2 | `a2fe7e6` | 2026-11-23 10:29 | results: speculative-decoding mismatch study, 7B and 1.5B targets (MacBook Air M5) |
+| 3 | `98330a1` | 2026-11-23 10:29 | results: MacBook Air M5 runs, llama.cpp Metal concurrency and prefill, MLX vs llama.cpp |
+| 4 | `42f740a` | 2026-11-23 10:29 | docs: Air M5 vs M4 Pro chart and speculative-mismatch chart |
+| 5 | `9948d49` | 2026-11-23 10:30 | docs(adr): 0005 update with the measured cause of the draft/no-draft output mismatch |
+| 6 | `969272a` | 2026-11-23 10:30 | build: make spec-mismatch target |
+| 7 | `3feb360` | 2026-11-23 10:30 | README: why draft output differs (near-ties, batched kernels) and MacBook Air M5 vs M4 Pro, with figures 8-9; limitations for the battery runs |
+| 8 | `176a8a0` | 2026-11-23 10:30 | build: spec-mismatch in the single .PHONY line |
+| 9 | (this commit) | | docs(timeline): this section |
+
+### Verification
+
+| Check | Result |
+|---|---|
+| Air hardware | Apple M5, 4P+6E CPU cores, 10-core GPU, 24 GB, macOS 27.2, battery 43% → 21% |
+| llama.cpp | official b12359 macOS arm64 release (same build number as the M4 Pro host) |
+| Model files | 7B Q4_K_M and 0.5B Q8_0 sha256 match the pinned hashes |
+| Target alone, repeated | 8/8 identical (7B and 1.5B) |
+| With a 3-token draft | 7B 3/8 identical (M4 Pro run: 3/8), 1.5B 6/8 (M4 Pro: 6/8) |
+| Gap at the divergences | 0.002-0.034 nats (7B), 0.005-0.008 (1.5B); median over all tokens 5.36 / 3.22 |
+| Batched prefill, no draft | picks the draft run's token in 3/5 (7B) and 2/2 (1.5B) cases |
+| Air vs M4 Pro decode | 0.57-0.75x (llama.cpp, 1 and 4 requests); prefill 1.25x at ~1k tokens, 0.82x at 3.8k |
+| Air clean-up | the temporary folder (llama.cpp binary, uv, Python, models, repo copy, logs) and the uv receipt deleted; no process left running |
+
+### Found while running it
+
+- The divergence counts on the Air equal those on the M4 Pro (5/8 and 2/8), with a different GPU, so
+  the effect is not tied to one chip.
+- A batched prefill of the target alone reproduces the draft run's token in most but not all cases,
+  because a whole-prompt batch and a 4-token verification batch are different shapes.
+- `n_probs` responses from llama-server give log-probabilities before sampling, which is what the
+  margin needs; decode speed with `n_probs` is lower, so these runs are not speed benchmarks.
+- Q8_0 at 4 concurrent on the Air measured 213 tok/s in one sweep and 131 tok/s in another 15 minutes
+  later; on battery and fanless this was not explained and is listed as a limitation.
+- The first 7B mismatch run was interrupted halfway and restarted; only the complete second run is
+  in `results/air/`.
