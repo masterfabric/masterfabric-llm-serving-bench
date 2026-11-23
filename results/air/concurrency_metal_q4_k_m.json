@@ -1,0 +1,94 @@
+{
+  "label": "air-metal-q4_k_m",
+  "url": "http://127.0.0.1:58080",
+  "max_tokens": 128,
+  "prompt_tokens_target": 0,
+  "ignore_eos": true,
+  "cache_prompt": null,
+  "backend": "metal",
+  "machine": "MacBook Air M5",
+  "quant": "q4_k_m",
+  "slots": 4,
+  "levels": [
+    {
+      "concurrency": 1,
+      "requests": 8,
+      "errors": 0,
+      "wall_s": 9.94,
+      "output_tok_s": 103.01,
+      "req_s": 0.805,
+      "per_request_tok_s_median": 107.07,
+      "ttft_s": {
+        "p50": 0.043,
+        "p95": 0.044
+      },
+      "itl_ms_p50": 9.26,
+      "e2e_s": {
+        "p50": 1.24,
+        "p95": 1.29
+      },
+      "prompt_tokens_mean": 48,
+      "completion_tokens_mean": 128.0
+    },
+    {
+      "concurrency": 2,
+      "requests": 8,
+      "errors": 0,
+      "wall_s": 6.19,
+      "output_tok_s": 165.4,
+      "req_s": 1.292,
+      "per_request_tok_s_median": 83.15,
+      "ttft_s": {
+        "p50": 0.014,
+        "p95": 0.016
+      },
+      "itl_ms_p50": 11.99,
+      "e2e_s": {
+        "p50": 1.55,
+        "p95": 1.58
+      },
+      "prompt_tokens_mean": 48,
+      "completion_tokens_mean": 128.0
+    },
+    {
+      "concurrency": 4,
+      "requests": 12,
+      "errors": 0,
+      "wall_s": 5.11,
+      "output_tok_s": 300.31,
+      "req_s": 2.346,
+      "per_request_tok_s_median": 76.61,
+      "ttft_s": {
+        "p50": 0.017,
+        "p95": 0.086
+      },
+      "itl_ms_p50": 12.99,
+      "e2e_s": {
+        "p50": 1.69,
+        "p95": 1.79
+      },
+      "prompt_tokens_mean": 48.7,
+      "completion_tokens_mean": 128.0
+    },
+    {
+      "concurrency": 8,
+      "requests": 24,
+      "errors": 0,
+      "wall_s": 10.9,
+      "output_tok_s": 281.82,
+      "req_s": 2.202,
+      "per_request_tok_s_median": 73.15,
+      "ttft_s": {
+        "p50": 1.844,
+        "p95": 1.906
+      },
+      "itl_ms_p50": 13.72,
+      "e2e_s": {
+        "p50": 3.59,
+        "p95": 3.72
+      },
+      "prompt_tokens_mean": 48.6,
+      "completion_tokens_mean": 128.0
+    }
+  ]
+}

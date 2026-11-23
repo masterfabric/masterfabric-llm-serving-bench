@@ -1,0 +1,9 @@
+{
+  "machine": "MacBook Air (Apple M5, 4 performance + 6 efficiency CPU cores, 10-core GPU, 24 GB unified memory)",
+  "os": "macOS 27.2",
+  "power": "battery, 43% -> 21% during the runs, low power mode off",
+  "llama_cpp": "official release b12359 (macos-arm64 binary, same build number as the M4 Pro host)",
+  "mlx": "mlx 0.32.4, mlx-lm 0.32.2",
+  "date": "2026-11-23",
+  "note": "Tools, models and repo copy were placed in one temporary folder on the Air and deleted after the runs."
+}

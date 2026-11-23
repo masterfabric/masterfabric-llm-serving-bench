@@ -1,0 +1,31 @@
+{
+  "machine": "MacBook Air M5 (10-core CPU 4P+6E, 10-core GPU, 24 GB), on battery",
+  "quant": "q4_k_m",
+  "cache_prompt": false,
+  "rows": [
+    {
+      "backend": "metal",
+      "prompt_tokens": 270,
+      "ttft_p50_s": 0.123,
+      "prefill_tok_s": 2195.1
+    },
+    {
+      "backend": "metal",
+      "prompt_tokens": 1018.7,
+      "ttft_p50_s": 0.37,
+      "prefill_tok_s": 2753.2
+    },
+    {
+      "backend": "metal",
+      "prompt_tokens": 3820.3,
+      "ttft_p50_s": 2.332,
+      "prefill_tok_s": 1638.2
+    },
+    {
+      "backend": "metal",
+      "prompt_tokens": 5620.7,
+      "ttft_p50_s": 3.441,
+      "prefill_tok_s": 1633.4
+    }
+  ]
+}

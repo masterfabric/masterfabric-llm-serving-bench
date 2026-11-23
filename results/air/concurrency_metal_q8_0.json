@@ -1,0 +1,94 @@
+{
+  "label": "air-metal-q8_0",
+  "url": "http://127.0.0.1:58080",
+  "max_tokens": 128,
+  "prompt_tokens_target": 0,
+  "ignore_eos": true,
+  "cache_prompt": null,
+  "backend": "metal",
+  "machine": "MacBook Air M5",
+  "quant": "q8_0",
+  "slots": 4,
+  "levels": [
+    {
+      "concurrency": 1,
+      "requests": 8,
+      "errors": 0,
+      "wall_s": 15.18,
+      "output_tok_s": 67.45,
+      "req_s": 0.527,
+      "per_request_tok_s_median": 68.51,
+      "ttft_s": {
+        "p50": 0.043,
+        "p95": 0.047
+      },
+      "itl_ms_p50": 14.6,
+      "e2e_s": {
+        "p50": 1.91,
+        "p95": 1.96
+      },
+      "prompt_tokens_mean": 48,
+      "completion_tokens_mean": 128.0
+    },
+    {
+      "concurrency": 2,
+      "requests": 8,
+      "errors": 0,
+      "wall_s": 8.93,
+      "output_tok_s": 114.64,
+      "req_s": 0.896,
+      "per_request_tok_s_median": 58.95,
+      "ttft_s": {
+        "p50": 0.024,
+        "p95": 0.029
+      },
+      "itl_ms_p50": 16.9,
+      "e2e_s": {
+        "p50": 2.2,
+        "p95": 2.39
+      },
+      "prompt_tokens_mean": 48,
+      "completion_tokens_mean": 128.0
+    },
+    {
+      "concurrency": 4,
+      "requests": 12,
+      "errors": 0,
+      "wall_s": 7.22,
+      "output_tok_s": 212.75,
+      "req_s": 1.662,
+      "per_request_tok_s_median": 53.15,
+      "ttft_s": {
+        "p50": 0.026,
+        "p95": 0.119
+      },
+      "itl_ms_p50": 18.73,
+      "e2e_s": {
+        "p50": 2.43,
+        "p95": 2.54
+      },
+      "prompt_tokens_mean": 48.7,
+      "completion_tokens_mean": 128.0
+    },
+    {
+      "concurrency": 8,
+      "requests": 24,
+      "errors": 0,
+      "wall_s": 15.54,
+      "output_tok_s": 197.73,
+      "req_s": 1.545,
+      "per_request_tok_s_median": 50.97,
+      "ttft_s": {
+        "p50": 2.592,
+        "p95": 2.867
+      },
+      "itl_ms_p50": 19.32,
+      "e2e_s": {
+        "p50": 5.11,
+        "p95": 5.47
+      },
+      "prompt_tokens_mean": 48.6,
+      "completion_tokens_mean": 128.0
+    }
+  ]
+}
