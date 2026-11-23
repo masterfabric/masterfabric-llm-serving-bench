@@ -6,7 +6,7 @@ Measured LLM serving benchmarks on servers that actually ran: aggregate throughp
 (TTFT) and inter-token latency (ITL) against concurrency, prefill cost against prompt length,
 weight quantization (Q4_K_M, Q8_0, F16), KV-cache quantization and prompt-cache reuse.
 llama.cpp on the Apple M4 Pro GPU (Metal) is compared with the same server in a CPU-only container
-and with Apple's MLX engine. A long-context curve (512 to 31k tokens) measures memory and speed as the
+and with Apple's MLX engine; the main runs are repeated on a MacBook Air M5. A long-context curve (512 to 31k tokens) measures memory and speed as the
 context grows, and speculative decoding with a 0.5B draft model is measured on 1.5B and 7B targets.
 
 Every number in this README comes from a file in [`results/`](results/), written by the scripts in
@@ -18,7 +18,8 @@ Every number in this README comes from a file in [`results/`](results/), written
 ## Contents
 
 - [Key results](#key-results) · [Setup](#setup) · [Results](#results) · [MLX vs llama.cpp](#mlx-vs-llamacpp-on-the-same-gpu) ·
-  [Long context](#long-context-512-to-31k-tokens) · [Speculative decoding](#speculative-decoding) · [Decisions (ADRs)](#decisions)
+  [Long context](#long-context-512-to-31k-tokens) · [Speculative decoding](#speculative-decoding) ·
+  [Why draft output differs](#why-speculative-output-differs-from-the-target-alone) · [MacBook Air M5](#macbook-air-m5-vs-m4-pro) · [Decisions (ADRs)](#decisions)
 - [Enterprise mapping](#enterprise-mapping) · [Quickstart](#quickstart) · [Limitations](#limitations) · [Roadmap](#roadmap)
 
 ## Key results
@@ -48,6 +49,14 @@ Every number in this README comes from a file in [`results/`](results/), written
 - **Speculative decoding pays off only for a big target on predictable text.** 7B + 0.5B draft:
   1.60x (llama.cpp) and 1.73x (MLX) on code/SQL/YAML, 0.41-0.49x on open text with 16 draft tokens.
   On the 1.5B target it is always slower (0.31-0.71x).
+- **Draft output differs from the target alone because of near-ties, not a bug.** Every one of the
+  5 divergences (7B, of 8 prompts) happened where the target's own top two tokens were within
+  0.002-0.034 nats (median gap over all tokens: 5.36), and the target alone was deterministic (8/8
+  identical repeats). Feeding the target the same prefix as one batch, with no draft model, picks
+  the draft run's token in 3 of 5 cases.
+- **A MacBook Air M5 decodes at 0.57-0.75x the M4 Pro** with llama.cpp (one and four requests,
+  Q4_K_M and Q8_0), but prefills short prompts faster (2,753 vs 2,196 prompt tok/s at ~1k tokens) and
+  long prompts slower (1,638 vs 1,999 at 3.8k). Measured on battery.
 - **The prompt cache turns a 1.89 s prefill into 13 ms** for a repeated 4k-token prompt, and costs
   nothing on the cold request (1.888 s vs 1.891 s).
 
@@ -207,6 +216,58 @@ not always byte-identical to the target alone (llama.cpp: 5 of 8 prompts diverge
 identical characters; MLX: 0-3 of 8), because batched verification rounds differently from
 single-token decoding. Files: `results/spec_*.json`; [ADR 0005](docs/adr/0005-speculative-decoding.md).
 
+### Why speculative output differs from the target alone
+
+<p align="center"><img src="docs/images/spec_mismatch.png" alt="Left: log-probability gap between the target's top two tokens at each divergence, all below 0.04 nats, against a median gap of 5.36 over all tokens. Right: repeats are identical 8 of 8; with a draft 3 of 8 (7B) and 6 of 8 (1.5B)" width="100%"></p>
+<p align="center"><sub><b>Figure 8.</b> Left: at the first token where the draft run differs, how close the target's own top two tokens were (log scale); dashed lines are the median gap over all generated tokens. Markers: what the target alone picks when the same prefix is fed as one batch. Right: identical outputs out of 8 prompts. llama.cpp b12359, Metal, greedy, 256 tokens, draft Qwen2.5-0.5B Q8_0 with 3 draft tokens; MacBook Air M5.</sub></p>
+
+The earlier run found greedy text with a draft model differing from the target alone on 5 of 8
+prompts (7B). `bench/spec_mismatch.py` repeats that comparison and asks why:
+
+| Check (7B target / 1.5B target) | 7B Q4_K_M | 1.5B Q4_K_M |
+|---|---|---|
+| Target alone, run twice: identical | 8/8 | 8/8 |
+| With a 3-token draft: identical to target alone | 3/8 | 6/8 |
+| First differing token (index in the output) | 114-254 | 34, 251 |
+| Draft run's token is the target's own 2nd choice | 5/5 | 2/2 |
+| Top-1 vs top-2 log-prob gap at that token | 0.002-0.034 nats | 0.005, 0.008 nats |
+| Median gap over all generated tokens | 5.36 nats | 3.22 nats |
+| Share of all tokens with a gap below 0.1 nats | 2.4% | 2.9% |
+| Target alone, same prefix as one batch, picks the draft run's token | 3/5 | 2/2 |
+
+**Cause.** Single-token decoding is deterministic, so the difference is not random. Every divergence
+sits on a near-tie (in the lowest 1.2% of gaps for that run) and the draft run always picks the
+target's second choice. With a draft, the target scores 4 tokens in one batch; without, it scores
+one. The batched and single-token Metal kernels sum in a different order, so the logits differ in
+the last bits, which is enough to flip a tie. The target alone shows the same flip with no draft
+model involved when the prefix is prefilled as a batch (3 of 5 at 7B, 2 of 2 at 1.5B); the other two
+cases depend on the exact batch shape (a whole prompt is not a 4-token verification batch). This is
+expected behaviour of floating-point batching, not a correctness bug in speculative decoding: the
+output is always a sequence the target itself scores as (nearly) best. Byte-identical output needs
+batch-invariant kernels, which llama.cpp does not offer on Metal. Files:
+`results/air/spec_mismatch_*.json`.
+
+### MacBook Air M5 vs M4 Pro
+
+<p align="center"><img src="docs/images/air_vs_m4.png" alt="Left: decode throughput on the Air M5 at 0.39 to 0.75 times the M4 Pro for llama.cpp and MLX at 1 and 4 concurrent requests. Right: prefill tokens per second against prompt length, Air faster at 270 and 1,019 tokens, slower at 3,820 and 5,621" width="100%"></p>
+<p align="center"><sub><b>Figure 9.</b> Left: output tokens/s on both machines with the same harness (Qwen2.5-1.5B, 128 tokens, EOS respected); labels are Air / M4 Pro. Right: cold prefill with llama.cpp on Metal, Q4_K_M. Air: Apple M5, 10-core GPU, 24 GB, on battery; same llama.cpp build number.</sub></p>
+
+| Qwen2.5-1.5B | M4 Pro | Air M5 | Air / M4 Pro |
+|---|---:|---:|---:|
+| llama.cpp Q4_K_M, 1 request (tok/s) | 164 | 107 | 0.65x |
+| llama.cpp Q4_K_M, 4 concurrent | 356 | 265 | 0.75x |
+| llama.cpp Q8_0, 1 request | 119 | 68 | 0.57x |
+| MLX 4-bit, 4 concurrent | 472 | 331 | 0.70x |
+| Prefill, ~1k-token prompt (prompt tok/s) | 2,196 | 2,753 | 1.25x |
+| Prefill, 3.8k-token prompt | 1,999 | 1,638 | 0.82x |
+
+Decode on one request tracks memory bandwidth: Apple lists 153 GB/s for the M5 and 273 GB/s for the
+M4 Pro (0.56x), close to the measured 0.57x for Q8_0 (a specification, not measured here). Short
+prefills are compute-bound and the Air's newer GPU wins; on long prompts it falls behind, which fits
+a fanless machine holding a lower sustained clock, but the clock was not measured. The decisions in
+ADR 0003-0005 hold on the Air: Q4_K_M is the faster format on Metal, and 4 concurrent requests
+saturate 4 slots (TTFT at 8 concurrent: 1.8 s Q4_K_M). Files: `results/air/`.
+
 ## Decisions
 
 | ADR | Decision |
@@ -264,10 +325,17 @@ OpenAI-compatible server, point the client at it:
 - **No GPU server and no vLLM run.** The lab has no NVIDIA GPU. "GPU" here means the Apple M4 Pro
   through Metal. The load generator speaks the OpenAI API, so vLLM numbers can be added without code
   changes, but none are claimed.
-- **No remote machines, including the MacBook Air.** The brief allowed benchmarking other machines
-  only if reachable. On 2026-11-21 this laptop was the only online node in both rounds (the MacBook
-  Air and the other Macs were offline), so none were benchmarked or contacted. Every MLX number
-  here is from the M4 Pro.
+- **The MacBook Air ran on battery, once.** On 2026-11-23 the Air M5 was reachable and the M4 Pro
+  was not, so the Air runs and the mismatch study were done there: battery 43% → 21%, low power mode
+  off, one run per configuration. Q8_0 at 4 concurrent gave 213 tok/s in the first sweep
+  (`ignore_eos`) and 131 tok/s in the MLX-comparison sweep 15 minutes later (EOS respected); the
+  difference was not explained, so the Air numbers are indicative. The tools, models and repo copy
+  lived in one temporary folder on the Air and were deleted afterwards; the CPU container and
+  long-context runs were not repeated there.
+- **Mismatch study on one machine and one build.** The cause (batched vs single-token kernels) is
+  shown by the batched-prefill test and the near-tie gaps, not by reading the Metal kernels; the 7B
+  mismatch study ran on the Air, the original speed results on the M4 Pro. Decode speeds in
+  `spec_mismatch_*.json` include the cost of returning top-2 probabilities and are not benchmarks.
 - **Ollama not measured.** It is installed but its server was not running, and this repo does not
   start or change long-lived services on the machine.
 - **One small model, short runs, single repetition.** Qwen2.5-1.5B only; 8-24 requests per level;
@@ -296,6 +364,7 @@ OpenAI-compatible server, point the client at it:
 - vLLM on an NVIDIA node with the same client, and FP8 KV cache vs f16.
 - Ollama and llama.cpp side by side on the same GGUF file.
 - Speculative decoding under concurrency, and n-gram / EAGLE drafts instead of a draft model.
+- The Air M5 runs on mains power with repetitions, and a CPU-only comparison on the Air.
 - MLX with a matched-quality 4-bit (for example group size 32) to compare at equal perplexity.
 - Longer runs with repetitions and confidence intervals; power draw per token on Metal.
 - 14B and larger models to find the memory limit of a 24 GB machine (7B is now measured).
