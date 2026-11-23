@@ -38,3 +38,13 @@ tokens that are thrown away: at 16 draft tokens the 7B runs are 2.0–2.4x slowe
   and single-token kernels round differently, so a near-tie between two tokens can flip.
 - On a GPU server with many concurrent users, batching already fills the GPU and speculative
   decoding gains less; this was measured only with one request at a time.
+
+## Update 2026-11-23: the output mismatch, measured
+
+`bench/spec_mismatch.py` (MacBook Air M5, same llama.cpp build) confirmed the explanation above. The
+target alone is deterministic (8/8 identical repeats); with a 3-token draft the 7B output differed on
+5 of 8 prompts again, each time at a token where the target's own top two choices were within
+0.002-0.034 nats, and the draft run always took the target's second choice. Prefilling the same
+prefix as one batch on the target alone, with no draft model, reproduces the flip in 3 of 5 cases.
+Decision unchanged: use speculative decoding where its speed-up is measured, and do not rely on
+byte-identical output between a draft and a non-draft deployment; compare quality, not bytes.
