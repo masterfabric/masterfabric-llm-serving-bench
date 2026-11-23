@@ -2,9 +2,7 @@
 SHELL := /bin/bash
 PY    ?= .venv/bin/python
 
-
-.PHONY: spec-mismatch
-.PHONY: help venv venv-mlx models models-extra bench concurrency prefill kvcache promptcache perplexity mlx mlx-concurrency mlx-single ctx spec mlx-ppl charts clean-servers
+.PHONY: help venv venv-mlx models models-extra bench concurrency prefill kvcache promptcache perplexity mlx mlx-concurrency mlx-single ctx spec spec-mismatch mlx-ppl charts clean-servers
 
 help: ## Show targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-14s\033[0m %s\n",$$1,$$2}'
