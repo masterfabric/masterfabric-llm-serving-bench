@@ -1,0 +1,126 @@
+{
+  "engine": "llama.cpp",
+  "target": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+  "draft": "qwen2.5-0.5b-instruct-q8_0.gguf",
+  "draft_tokens": 3,
+  "max_tokens": 256,
+  "rows": [
+    {
+      "group": "structured",
+      "id": "s1",
+      "repeat_identical": true,
+      "draft_identical": true,
+      "first_diff_token": null
+    },
+    {
+      "group": "structured",
+      "id": "s2",
+      "repeat_identical": true,
+      "draft_identical": true,
+      "first_diff_token": null
+    },
+    {
+      "group": "structured",
+      "id": "s3",
+      "repeat_identical": true,
+      "draft_identical": true,
+      "first_diff_token": null
+    },
+    {
+      "group": "structured",
+      "id": "s4",
+      "repeat_identical": true,
+      "draft_identical": true,
+      "first_diff_token": null
+    },
+    {
+      "group": "open",
+      "id": "o1",
+      "repeat_identical": true,
+      "draft_identical": false,
+      "first_diff_token": 34,
+      "gap_at_diff": 0.00821,
+      "target_token": 393,
+      "draft_run_token": 66503,
+      "draft_token_is_target_top2": true,
+      "gap_rank_pct": 0.8,
+      "batched_prefill_token": 66503,
+      "batched_prefill_matches": "draft run"
+    },
+    {
+      "group": "open",
+      "id": "o2",
+      "repeat_identical": true,
+      "draft_identical": false,
+      "first_diff_token": 251,
+      "gap_at_diff": 0.00464,
+      "target_token": 279,
+      "draft_run_token": 264,
+      "draft_token_is_target_top2": true,
+      "gap_rank_pct": 0.4,
+      "batched_prefill_token": 264,
+      "batched_prefill_matches": "draft run"
+    },
+    {
+      "group": "open",
+      "id": "o3",
+      "repeat_identical": true,
+      "draft_identical": true,
+      "first_diff_token": null
+    },
+    {
+      "group": "open",
+      "id": "o4",
+      "repeat_identical": true,
+      "draft_identical": true,
+      "first_diff_token": null
+    }
+  ],
+  "summary": {
+    "repeat_identical": 8,
+    "draft_identical": 6,
+    "n": 8,
+    "diverged_at_top2": 2,
+    "gap_at_diff_median": 0.006425,
+    "gap_all_tokens_median": 3.2166,
+    "tokens_with_gap_below_0.1": 0.0287,
+    "batched_prefill_matches_draft_run": 2,
+    "batched_prefill_matches_target_alone": 0,
+    "decode_tok_s_target": 97.51,
+    "decode_tok_s_draft": 87.67
+  },
+  "texts": {
+    "s1": {
+      "target": "```python\nfrom datetime import datetime\n\ndef parse_iso_date(s: str) -> datetime.date:\n    \"\"\"\n    Parses an ISO 8601 date string into a Python `datetime.date` object.\n\n    Args:\n    s (str): An ISO 8601 date string in the format YYYY-MM-DD.\n\n    Returns:\n    datetime.date: A `datetime.date` object representing the parsed date.\n    \"\"\"\n    return datetime.strptime(s, \"%Y-%m-%d\").date()\n\n# Test functions\ndef test_parse_iso_date():\n    assert parse_iso_date(\"2023-04-01\") == datetime.date(datetime(2023, 4, 1))\n    assert parse_iso_date(\"2023-04-01T12:00:00\") == datetime.date(datetime(2023, 4, 1))\n    assert parse_iso_date(\"2023-04-01T12:00:00Z\") == datetime.date(datetime(2023, 4, 1))\n    assert parse_iso_date(\"2023-04-01T12:00:00+0",
+      "draft": "```python\nfrom datetime import datetime\n\ndef parse_iso_date(s: str) -> datetime.date:\n    \"\"\"\n    Parses an ISO 8601 date string into a Python `datetime.date` object.\n\n    Args:\n    s (str): An ISO 8601 date string in the format YYYY-MM-DD.\n\n    Returns:\n    datetime.date: A `datetime.date` object representing the parsed date.\n    \"\"\"\n    return datetime.strptime(s, \"%Y-%m-%d\").date()\n\n# Test functions\ndef test_parse_iso_date():\n    assert parse_iso_date(\"2023-04-01\") == datetime.date(datetime(2023, 4, 1))\n    assert parse_iso_date(\"2023-04-01T12:00:00\") == datetime.date(datetime(2023, 4, 1))\n    assert parse_iso_date(\"2023-04-01T12:00:00Z\") == datetime.date(datetime(2023, 4, 1))\n    assert parse_iso_date(\"2023-04-01T12:00:00+0"
+    },
+    "s2": {
+      "target": "Certainly! Below is the PostgreSQL DDL for three tables: `customers`, `orders`, and `order_items`, with the specified constraints:\n\n```sql\n-- Table: customers\nCREATE TABLE customers (\n    customer_id SERIAL PRIMARY KEY,\n    first_name VARCHAR(50) NOT NULL,\n    last_name VARCHAR(50) NOT NULL,\n    email VARCHAR(100) UNIQUE NOT NULL,\n    phone VARCHAR(20),\n    address VARCHAR(255),\n    city VARCHAR(100),\n    state VARCHAR(100),\n    zip_code VARCHAR(20),\n    country VARCHAR(50),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Table: orders\nCREATE TABLE orders (\n    order_id SERIAL PRIMARY KEY,\n    customer_id INT REFERENCES customers(customer_id) ON DELETE CASCADE,\n    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    status VARCHAR(50),\n    total_amount DECIMAL(10, 2),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Table: order_items\nCREATE TABLE order_items (\n    order_item_id SERIAL PRIMARY KEY,\n    order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,\n    product_id INT REFERENCES products(product",
+      "draft": "Certainly! Below is the PostgreSQL DDL for three tables: `customers`, `orders`, and `order_items`, with the specified constraints:\n\n```sql\n-- Table: customers\nCREATE TABLE customers (\n    customer_id SERIAL PRIMARY KEY,\n    first_name VARCHAR(50) NOT NULL,\n    last_name VARCHAR(50) NOT NULL,\n    email VARCHAR(100) UNIQUE NOT NULL,\n    phone VARCHAR(20),\n    address VARCHAR(255),\n    city VARCHAR(100),\n    state VARCHAR(100),\n    zip_code VARCHAR(20),\n    country VARCHAR(50),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Table: orders\nCREATE TABLE orders (\n    order_id SERIAL PRIMARY KEY,\n    customer_id INT REFERENCES customers(customer_id) ON DELETE CASCADE,\n    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    status VARCHAR(50),\n    total_amount DECIMAL(10, 2),\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\n-- Table: order_items\nCREATE TABLE order_items (\n    order_item_id SERIAL PRIMARY KEY,\n    order_id INT REFERENCES orders(order_id) ON DELETE CASCADE,\n    product_id INT REFERENCES products(product"
+    },
+    "s3": {
+      "target": "```yaml\nservice:\n  name: rag-api\n  replicas: 2\n  ports:\n  - 8000\n  - 9090\n  env:\n    TOP_K: 4\n    MIN_SCORE: 0.55\n    LOG_LEVEL: info\n  resources:\n    requests:\n      cpu: 250m\n      memory: 256Mi\n    limits:\n      cpu: 1\n      memory: 512Mi\n```",
+      "draft": "```yaml\nservice:\n  name: rag-api\n  replicas: 2\n  ports:\n  - 8000\n  - 9090\n  env:\n    TOP_K: 4\n    MIN_SCORE: 0.55\n    LOG_LEVEL: info\n  resources:\n    requests:\n      cpu: 250m\n      memory: 256Mi\n    limits:\n      cpu: 1\n      memory: 512Mi\n```"
+    },
+    "s4": {
+      "target": "One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, Eighteen, Nineteen, Twenty, Thirty, Forty, Fifty, Sixty, Seventy, Eighty.",
+      "draft": "One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleven, Twelve, Thirteen, Fourteen, Fifteen, Sixteen, Seventeen, Eighteen, Nineteen, Twenty, Thirty, Forty, Fifty, Sixty, Seventy, Eighty."
+    },
+    "o1": {
+      "target": "In the context of large language models (LLMs), such as those used in AI-powered chatbots, virtual assistants, or language translation systems, the choice between using a PagedAttention mechanism and a contiguous KV cache (Key-Value cache) is a trade-off between memory efficiency and computational efficiency.\n\n### PagedAttention\n\n**Definition**: PagedAttention is a technique used in neural network architectures, particularly in transformer models, to manage memory efficiently. It involves breaking down the input sequence into smaller chunks (pages) and processing each chunk independently. This approach allows the model to focus on a specific part of the input at a time, reducing the need to load the entire input into memory at once.\n\n**Advantages**:\n- **Memory Efficiency**: By processing chunks of the input independently, PagedAttention reduces the amount of memory required to store the entire input sequence. This is particularly beneficial for large models where the input sequence can be very long.\n- **Speed**: Since the model only needs to load and process a small portion of the input at a time, it can be faster in terms of memory access and computation.\n\n**Disadvantages**:\n- **Latency**: The model may experience a slight delay in processing each chunk, as it needs to load the next chunk",
+      "draft": "In the context of large language models (LLMs), such as those used in AI-powered chatbots, virtual assistants, or language translation systems, the choice between using a contiguous key-value (KV) cache and a paged attention mechanism can have significant trade-offs. Let's break down these two approaches:\n\n### Contiguous KV Cache\n\nA contiguous KV cache is a simple and straightforward approach where the model's key-value pairs are stored in a contiguous block of memory. This means that all the keys and values are stored together, allowing for efficient memory access and faster computation. The main advantage of this approach is:\n\n- **Memory Efficiency**: The model can access all the keys and values in a single contiguous block, which can lead to faster memory access times.\n- **Simpler Implementation**: The model can be designed to directly access the entire cache, making the implementation simpler and potentially faster.\n\nHowever, there are also some downsides:\n\n- **Limited Flexibility**: The model cannot easily be modified to use different types of memory or different data structures, which might be necessary for certain applications or optimizations.\n- **Potential Overhead**: If the model needs to access parts of the cache that are not contiguous, it may need to load additional data from memory, which can introduce overhead.\n\n"
+    },
+    "o2": {
+      "target": "Once upon a time, there was a network engineer named Jack. He worked for a large telecommunications company and was responsible for maintaining the company's network infrastructure. One night, as he was checking the status of the network, he noticed something strange. The network was not functioning properly, and there was a strange noise coming from the server room.\nJack quickly went to the server room and found a sleeping cell. The cell was filled with a strange substance that was emitting a faint glow. Jack was puzzled and decided to investigate further.\nAs he opened the cell, he found a small device inside. The device was a quantum computer, and it was programmed to perform complex calculations. Jack was amazed by the device's capabilities and decided to take it with him.\nHe returned to his office and plugged the device into his computer. The device began to run calculations at an incredible speed, and Jack was amazed by the results. He realized that the device was capable of solving some of the most complex problems in the world.\nJack was thrilled with the discovery and decided to share it with the company. He showed the device to his colleagues and they were amazed by its capabilities. The company was impressed by the device and offered Jack a promotion.\nFrom that day on, Jack became the company's expert in",
+      "draft": "Once upon a time, there was a network engineer named Jack. He worked for a large telecommunications company and was responsible for maintaining the company's network infrastructure. One night, as he was checking the status of the network, he noticed something strange. The network was not functioning properly, and there was a strange noise coming from the server room.\nJack quickly went to the server room and found a sleeping cell. The cell was filled with a strange substance that was emitting a faint glow. Jack was puzzled and decided to investigate further.\nAs he opened the cell, he found a small device inside. The device was a quantum computer, and it was programmed to perform complex calculations. Jack was amazed by the device's capabilities and decided to take it with him.\nHe returned to his office and plugged the device into his computer. The device began to run calculations at an incredible speed, and Jack was amazed by the results. He realized that the device was capable of solving some of the most complex problems in the world.\nJack was thrilled with the discovery and decided to share it with the company. He showed the device to his colleagues and they were amazed by its capabilities. The company was impressed by the device and offered Jack a promotion.\nFrom that day on, Jack became a hero in the company"
+    },
+    "o3": {
+      "target": "The lifecycle of a churn model from data quality checks to online serving typically involves several key steps:\n\n1. Data Collection: The first step is to collect data on customers, including their behavior, demographics, and other relevant information. This data can come from various sources, such as customer surveys, transaction records, and social media interactions.\n\n2. Data Preprocessing: Once the data is collected, it needs to be preprocessed to ensure that it meets the requirements for the churn model. This involves cleaning the data, handling missing values, and transforming the data into a format that can be used for analysis.\n\n3. Data Quality Checks: After the data is preprocessed, it needs to be checked for quality. This involves verifying that the data meets the required standards for the churn model, such as ensuring that the data is accurate, complete, and free of errors.\n\n4. Feature Engineering: Once the data is checked for quality, the next step is to create features that can be used to build the churn model. This involves selecting the most relevant features from the data and transforming them into a format that can be used for analysis.\n\n5. Model Building: After the features are created, the next step is to build the churn model. This involves selecting the appropriate algorithm and parameters for the",
+      "draft": "The lifecycle of a churn model from data quality checks to online serving typically involves several key steps:\n\n1. Data Collection: The first step is to collect data on customers, including their behavior, demographics, and other relevant information. This data can come from various sources, such as customer surveys, transaction records, and social media interactions.\n\n2. Data Preprocessing: Once the data is collected, it needs to be preprocessed to ensure that it meets the requirements for the churn model. This involves cleaning the data, handling missing values, and transforming the data into a format that can be used for analysis.\n\n3. Data Quality Checks: After the data is preprocessed, it needs to be checked for quality. This involves verifying that the data meets the required standards for the churn model, such as ensuring that the data is accurate, complete, and free of errors.\n\n4. Feature Engineering: Once the data is checked for quality, the next step is to create features that can be used to build the churn model. This involves selecting the most relevant features from the data and transforming them into a format that can be used for analysis.\n\n5. Model Building: After the features are created, the next step is to build the churn model. This involves selecting the appropriate algorithm and parameters for the"
+    },
+    "o4": {
+      "target": "Data teams often argue about lakehouse versus warehouse because they have different perspectives on the best approach for handling data in their organization. Both lakehouse and warehouse approaches have their pros and cons, and the choice between them depends on the specific needs and goals of the organization.\n\nA lakehouse approach is a data architecture that combines the best features of a data warehouse and a data lake. It allows for easy querying of data in a single location, while also providing the flexibility to store large amounts of data in a lake. This approach is often used by organizations that need to quickly analyze large amounts of data, such as financial institutions or e-commerce companies.\n\nOn the other hand, a warehouse approach is a data architecture that focuses on storing and querying data in a single location. This approach is often used by organizations that need to analyze data in a specific way, such as financial institutions or healthcare providers.\n\nBoth lakehouse and warehouse approaches have their pros and cons. A lakehouse approach can be more flexible and easier to query, but it can also be more expensive to set up and maintain. A warehouse approach can be more efficient and cost-effective, but it can be more difficult to query and analyze data.\n\nIn summary, the choice between lakehouse and warehouse approaches depends on the specific needs and goals",
+      "draft": "Data teams often argue about lakehouse versus warehouse because they have different perspectives on the best approach for handling data in their organization. Both lakehouse and warehouse approaches have their pros and cons, and the choice between them depends on the specific needs and goals of the organization.\n\nA lakehouse approach is a data architecture that combines the best features of a data warehouse and a data lake. It allows for easy querying of data in a single location, while also providing the flexibility to store large amounts of data in a lake. This approach is often used by organizations that need to quickly analyze large amounts of data, such as financial institutions or e-commerce companies.\n\nOn the other hand, a warehouse approach is a data architecture that focuses on storing and querying data in a single location. This approach is often used by organizations that need to analyze data in a specific way, such as financial institutions or healthcare providers.\n\nBoth lakehouse and warehouse approaches have their pros and cons. A lakehouse approach can be more flexible and easier to query, but it can also be more expensive to set up and maintain. A warehouse approach can be more efficient and cost-effective, but it can be more difficult to query and analyze data.\n\nIn summary, the choice between lakehouse and warehouse approaches depends on the specific needs and goals"
+    }
+  }
+}
