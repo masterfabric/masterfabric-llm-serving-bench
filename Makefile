@@ -2,6 +2,8 @@
 SHELL := /bin/bash
 PY    ?= .venv/bin/python
 
+
+.PHONY: spec-mismatch
 .PHONY: help venv venv-mlx models models-extra bench concurrency prefill kvcache promptcache perplexity mlx mlx-concurrency mlx-single ctx spec mlx-ppl charts clean-servers
 
 help: ## Show targets
@@ -33,6 +35,10 @@ mlx-concurrency mlx-single ctx spec: ## Run one MLX-related experiment
 
 mlx-ppl: ## Perplexity of the MLX 4-bit and 8-bit weights
 	$(PY) bench/mlx_perplexity.py
+
+spec-mismatch: ## Why draft output differs from the target alone (7B and 1.5B, about 10 minutes)
+	cd bench && ../$(PY) spec_mismatch.py --target 7b --out ../results/air/spec_mismatch_7b_air.json
+	cd bench && ../$(PY) spec_mismatch.py --target 1.5b --out ../results/air/spec_mismatch_1.5b_air.json
 
 charts: ## Render charts, the setup diagram and the hero from results/*.json
 	cd bench && ../$(PY) make_charts.py && ../$(PY) make_diagrams.py && ../$(PY) make_hero.py
