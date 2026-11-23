@@ -193,9 +193,100 @@ def spec_decode():
     plt.close(fig)
 
 
+def air_vs_m4():
+    """Same harness on the MacBook Air M5 (battery) and the M4 Pro: ratio Air / M4 Pro."""
+    import numpy as np
+    m4 = {r["label"]: r for r in J("mlx_concurrency")["runs"]}
+    air = {r["label"]: r for r in J("air/mlx_concurrency")["runs"]}
+    labels = [("llamacpp-q4_k_m", "llama.cpp Q4_K_M"), ("llamacpp-q8_0", "llama.cpp Q8_0"),
+              ("mlx-Qwen2.5-1.5B-Instruct-4bit", "MLX 4-bit"), ("mlx-Qwen2.5-1.5B-Instruct-8bit", "MLX 8-bit")]
+    fig, (a, b) = plt.subplots(1, 2, figsize=(16, 5.2), gridspec_kw={"width_ratios": [1.35, 1]})
+    w = 0.2
+    for i, (lvl, col) in enumerate(((1, "GREY"), (4, "GREEN"))):
+        m = [next(l for l in m4[k]["levels"] if l["concurrency"] == lvl)["output_tok_s"] for k, _ in labels]
+        r = [next(l for l in air[k]["levels"] if l["concurrency"] == lvl)["output_tok_s"] for k, _ in labels]
+        xs = np.arange(len(labels))
+        a.bar(xs + (2 * i - 1.5) * w, m, w * 0.92, color=HEX[col], alpha=0.45, label=f"M4 Pro, {lvl} concurrent")
+        bars = a.bar(xs + (2 * i - 0.5) * w, r, w * 0.92, color=HEX[col], label=f"Air M5, {lvl} concurrent")
+        for bar, v, mv in zip(bars, r, m):
+            a.text(bar.get_x() + bar.get_width() / 2, v + 6, f"{v / mv:.2f}x", ha="center", fontsize=8.5, color=HEX["WHITE"])
+    a.set_xticks(range(len(labels)), [t for _, t in labels])
+    a.set_ylabel("output tokens/s (Qwen2.5-1.5B, 128 tokens, EOS respected)")
+    a.set_title("Decode throughput, same harness (labels: Air / M4 Pro)", loc="left")
+    a.legend(fontsize=9, ncol=2)
+    a.grid(axis="x", visible=False)
+    pm = {r["prompt_tokens"]: r["prefill_tok_s"] for r in J("prefill")["rows"] if r["backend"] == "metal"}
+    pa = {r["prompt_tokens"]: r["prefill_tok_s"] for r in J("air/prefill")["rows"]}
+    ks = sorted(set(pm) & set(pa))
+    b.plot(ks, [pm[k] for k in ks], "-o", color=HEX["ICE"], label="M4 Pro")
+    b.plot(ks, [pa[k] for k in ks], "-o", color=HEX["ORANGE"], label="Air M5 (battery)")
+    for k in ks:
+        b.annotate(f"{pa[k] / pm[k]:.2f}x", (k, pa[k]), textcoords="offset points", xytext=(0, 8), ha="center",
+                   fontsize=8.5, color=HEX["ORANGE"])
+    b.set_xscale("log")
+    b.minorticks_off()
+    b.set_xticks(ks, [f"{k:,.0f}" for k in ks])
+    b.set_xlabel("prompt tokens (cold, Q4_K_M, llama.cpp Metal)")
+    b.set_ylabel("prefill tokens/s")
+    b.set_title("Prefill: the Air is faster on short prompts only", loc="left")
+    b.legend(fontsize=9)
+    fig.tight_layout()
+    fig.savefig(IMG / "air_vs_m4.png")
+    plt.close(fig)
+
+
+def spec_mismatch():
+    """Where greedy output with a draft first differs from the target alone, and how close the top-2 tokens were."""
+    fig, (a, b) = plt.subplots(1, 2, figsize=(16, 5.2), gridspec_kw={"width_ratios": [1.4, 1]})
+    sets = [("air/spec_mismatch_7b_air", "7B Q4_K_M target", HEX["GREEN"]),
+            ("air/spec_mismatch_1.5b_air", "1.5B Q4_K_M target", HEX["ICE"])]
+    x = 0
+    ticks = []
+    for f, lab, c in sets:
+        d = J(f)
+        rows = [r for r in d["rows"] if "gap_at_diff" in r]
+        for r in rows:
+            mark = {"draft run": "o", "target alone": "s"}[r["batched_prefill_matches"]]
+            a.bar(x, r["gap_at_diff"], 0.6, color=c)
+            a.scatter([x], [r["gap_at_diff"] * 1.6], marker=mark, color=HEX["WHITE"], s=28, zorder=3)
+            ticks.append((x, f"{r['id']}\ntok {r['first_diff_token']}"))
+            x += 1
+        a.axhline(d["summary"]["gap_all_tokens_median"], color=c, ls="--", lw=1.2)
+        a.text(x - 0.4, d["summary"]["gap_all_tokens_median"] * 1.15,
+               f"median gap, all tokens ({lab.split()[0]}): {d['summary']['gap_all_tokens_median']:.2f}",
+               ha="right", fontsize=9, color=c)
+        x += 0.8
+    a.set_yscale("log")
+    a.set_ylim(0.001, 20)
+    a.set_xticks([t for t, _ in ticks], [l for _, l in ticks], fontsize=8.5)
+    a.set_ylabel("target alone: log-prob gap top-1 vs top-2 (nats)")
+    a.set_title("Every divergence is a near-tie of the target's own top two tokens", loc="left")
+    a.scatter([], [], marker="o", color=HEX["WHITE"], label="batched prefill, no draft, picks the draft run's token")
+    a.scatter([], [], marker="s", color=HEX["WHITE"], label="batched prefill picks the target-alone token")
+    a.legend(fontsize=8.5, loc="upper left")
+    a.grid(axis="x", visible=False)
+    cats = ["repeat,\nno draft", "with draft", "diverged at\ntarget top-2"]
+    for i, (f, lab, c) in enumerate(sets):
+        sm = J(f)["summary"]
+        vals = [sm["repeat_identical"], sm["draft_identical"], sm["diverged_at_top2"]]
+        bars = b.bar([j + (i - 0.5) * 0.36 for j in range(3)], vals, 0.34, color=c, label=lab)
+        for bar, v in zip(bars, vals):
+            b.text(bar.get_x() + bar.get_width() / 2, v + 0.1, f"{v}/8" if bar.get_x() < 1.5 else f"{v}", ha="center",
+                   fontsize=9, color=HEX["WHITE"])
+    b.set_xticks(range(3), ["identical runs,\nno draft", "identical with\ndraft (3 tokens)", "divergences at the\ntarget's 2nd choice"])
+    b.set_ylim(0, 9.5)
+    b.set_ylabel("prompts (of 8)")
+    b.set_title("Single-token decoding is deterministic", loc="left")
+    b.legend(fontsize=9)
+    b.grid(axis="x", visible=False)
+    fig.tight_layout()
+    fig.savefig(IMG / "spec_mismatch.png")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     IMG.mkdir(parents=True, exist_ok=True)
-    for f in (concurrency, prefill, kv_and_quant, mlx_vs_llamacpp, ctx_curve, spec_decode):
+    for f in (concurrency, prefill, kv_and_quant, mlx_vs_llamacpp, ctx_curve, spec_decode, air_vs_m4, spec_mismatch):
         try:
             f()
         except FileNotFoundError as e:
